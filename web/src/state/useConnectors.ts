@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  addCatalogConnector,
   authorizeConnector,
   createConnector,
+  listCatalog,
   listConnectors,
+  type CatalogConnector,
   type Connector,
   type CreateConnectorInput,
 } from '../lib/connectors';
@@ -33,6 +36,9 @@ export function useConnectors() {
   const [state, setState] = useState<ConnectorsState>({ loading: true, offline: false, connectors: [] });
   const [connectState, setConnectState] = useState<Record<string, ConnectState>>({});
   const [addState, setAddState] = useState<AddState>('idle');
+  const [catalog, setCatalog] = useState<CatalogConnector[]>([]);
+  // Name of the catalog connector currently being added (for its tile's spinner), or null.
+  const [addingName, setAddingName] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -43,9 +49,18 @@ export function useConnectors() {
     }
   }, []);
 
+  const loadCatalog = useCallback(async () => {
+    try {
+      setCatalog(await listCatalog());
+    } catch {
+      setCatalog([]); // catalog is a nicety; its failure must not break manual add
+    }
+  }, []);
+
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void loadCatalog();
+  }, [refresh, loadCatalog]);
 
   // The user authorises in another tab; refresh when they come back so a completed connect shows.
   useEffect(() => {
@@ -93,5 +108,31 @@ export function useConnectors() {
     [refresh],
   );
 
-  return { ...state, connectState, addState, refresh, connect, add };
+  const addFromCatalog = useCallback(
+    async (entry: CatalogConnector, headers?: Record<string, string>): Promise<boolean> => {
+      setAddingName(entry.name);
+      try {
+        await addCatalogConnector(entry, headers);
+        await refresh();
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setAddingName(null);
+      }
+    },
+    [refresh],
+  );
+
+  return {
+    ...state,
+    connectState,
+    addState,
+    catalog,
+    addingName,
+    refresh,
+    connect,
+    add,
+    addFromCatalog,
+  };
 }

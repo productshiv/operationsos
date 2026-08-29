@@ -70,3 +70,57 @@ export async function createConnector(input: CreateConnectorInput): Promise<void
     },
   });
 }
+
+/** How a catalog connector authenticates. `dcr` runs the OAuth flow after it's added. */
+export type CatalogAuthType = 'none' | 'header' | 'dcr';
+
+/** A known MCP server from the harness catalog — everything needed to add it in one click. */
+export interface CatalogConnector {
+  name: string;
+  description: string;
+  url: string;
+  authType: CatalogAuthType;
+  /** For `header` auth: header name(s) mapped to a template value (e.g. `Bearer YOUR_TOKEN`). */
+  headerTemplate?: Record<string, string>;
+  /** Logo asset URL, for the tile. */
+  logo?: string;
+}
+
+/** The harness catalog of well-known MCP servers (TrueForge's one-click connector list). */
+export async function listCatalog(): Promise<CatalogConnector[]> {
+  const resp = await trueforgeControl.catalogs.mcpServers.list();
+  return (resp.data ?? []).map((s) => ({
+    name: s.name,
+    description: s.description,
+    url: s.url,
+    authType: s.auth?.type === 'header' ? 'header' : s.auth?.type === 'dcr' ? 'dcr' : 'none',
+    headerTemplate: s.auth?.type === 'header' ? s.auth.headers : undefined,
+    logo: s.logo,
+  }));
+}
+
+/**
+ * Add a connector straight from the catalog. `none`/`dcr` need no input (dcr is authorised
+ * afterwards via {@link authorizeConnector}); `header` connectors take the resolved header values.
+ */
+export async function addCatalogConnector(
+  entry: CatalogConnector,
+  headers?: Record<string, string>,
+): Promise<void> {
+  const auth =
+    entry.authType === 'header'
+      ? { type: 'header' as const, headers: headers ?? entry.headerTemplate ?? {} }
+      : entry.authType === 'dcr'
+        ? { type: 'dcr' as const }
+        : undefined;
+
+  await trueforgeControl.settings.mcpServers.create({
+    manifest: {
+      type: 'remote',
+      name: entry.name,
+      description: entry.description,
+      url: entry.url,
+      ...(auth ? { auth } : {}),
+    },
+  });
+}
