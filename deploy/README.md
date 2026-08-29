@@ -35,10 +35,13 @@ Seed the business data from the separate [`weather-business`](../../weather-busi
 
 ```bash
 cd deploy
-cp .env.example .env   # edit POSTGRES_PASSWORD
+cp .env.example .env   # optional — only PUBLIC_BASE_URL / WEB_PORT
 docker compose up --build
 # app on http://localhost:8080 ; harness proxied at http://localhost:8080/tf
 ```
+
+The Postgres credentials are fixed inside the compose (internal DB), so there is nothing to set for
+the database.
 
 ## Notes / known rough edges
 
@@ -46,5 +49,10 @@ docker compose up --build
   auth, pin a tag you can pull (or build from the TrueForge repo).
 - The harness is exposed (unauthenticated) through `/tf`. For anything beyond a demo, put auth in
   front of it or enable TrueForge's OIDC login.
+- **Existing Postgres volume:** the DB credentials are fixed to `trueforge/trueforge`. Postgres
+  only applies init credentials to an **empty** data directory, so a `postgres-data` volume that was
+  initialised with different credentials will leave the harness unable to connect. If you're
+  migrating (or a prior failed deploy left a half-initialised volume), **delete the `postgres-data`
+  volume and redeploy** so it re-initialises with the fixed credentials.
 - This compose has not been run end-to-end on Coolify yet — expect one round of tuning
   (image tag, `PUBLIC_BASE_URL`, port mapping) on first deploy.
