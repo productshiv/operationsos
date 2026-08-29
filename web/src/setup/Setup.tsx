@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { useModels } from '../state/useModels';
 import { TRUEFORGE_BASE_URL } from '../lib/trueforge';
+import { AGENT_MODEL } from '../lib/agents';
 import type { Connector, ConnectorAuthKind } from '../lib/connectors';
 import type { ModelRef } from '../lib/models';
 
@@ -25,8 +26,9 @@ export function Setup({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const offline = connectors.offline || models.offline;
-  const loading = connectors.loading || models.loading;
+  // Only a true harness-health failure (both endpoints unreachable) collapses the whole panel.
+  // A fault in one endpoint leaves the other section fully usable — each renders its own state.
+  const harnessDown = connectors.offline && models.offline;
 
   const refreshAll = () => {
     void connectors.refresh();
@@ -50,16 +52,12 @@ export function Setup({
             </p>
           </div>
 
-          {loading && <p className="dim">Scanning the harness at {TRUEFORGE_BASE_URL}…</p>}
-
-          {!loading && offline && (
+          {harnessDown ? (
             <div className="setup-note">
               <p><b>Harness not reachable</b> at {TRUEFORGE_BASE_URL}.</p>
               <p className="dim">Start it with <code>npx @truefoundry/trueforge@latest</code>, then refresh.</p>
             </div>
-          )}
-
-          {!loading && !offline && (
+          ) : (
             <>
               <ModelsSection models={models} />
               <ConnectorsSection connectors={connectors} />
@@ -81,6 +79,9 @@ export function Setup({
 function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
   const [adding, setAdding] = useState(false);
 
+  // Agents run on one specific model — a differently named provider doesn't make them runnable.
+  const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === AGENT_MODEL);
+
   return (
     <section className="intg-sec">
       <div className="intg-sec-head">
@@ -90,19 +91,39 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
         )}
       </div>
 
-      {models.models.length === 0 && !adding && (
+      {models.loading && <p className="dim">Loading models…</p>}
+
+      {!models.loading && models.offline && (
         <div className="setup-note">
-          <p><b>No model configured.</b> Agents can’t think until one is.</p>
-          <p className="dim">Add an OpenAI-compatible provider (OpenRouter, Together, …).</p>
+          <p><b>Couldn’t reach model settings.</b></p>
+          <p className="dim">The harness is up but its model endpoint didn’t respond — refresh to retry.</p>
         </div>
       )}
 
-      {models.models.length > 0 && (
-        <div className="intg-list">
-          {models.models.map((m) => (
-            <ModelRow key={`${m.provider}/${m.model}`} model={m} />
-          ))}
-        </div>
+      {!models.loading && !models.offline && (
+        <>
+          {models.models.length === 0 && !adding && (
+            <div className="setup-note">
+              <p><b>No model configured.</b> Agents can’t think until one is.</p>
+              <p className="dim">Add an OpenAI-compatible provider (OpenRouter, Together, …).</p>
+            </div>
+          )}
+
+          {models.models.length > 0 && (
+            <div className="intg-list">
+              {models.models.map((m) => (
+                <ModelRow key={`${m.provider}/${m.model}`} model={m} />
+              ))}
+            </div>
+          )}
+
+          {/* Some model exists, but not the one the agents call — say so plainly. */}
+          {models.models.length > 0 && !hasAgentModel && !adding && (
+            <p className="dim intg-form-note">
+              Agents run on <code>{AGENT_MODEL}</code> — add that exact provider/model to go live.
+            </p>
+          )}
+        </>
       )}
 
       {adding && <ProviderForm models={models} onDone={() => setAdding(false)} />}
@@ -111,13 +132,14 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
 }
 
 function ModelRow({ model }: { model: ModelRef }) {
+  const isAgentModel = `${model.provider}/${model.model}` === AGENT_MODEL;
   return (
     <div className="conn">
       <div className="conn-id">
         <div className="conn-name">{model.provider}/{model.model}</div>
         <div className="conn-url dim">{model.modelId}</div>
       </div>
-      <span className="conn-ok">✓ ready</span>
+      <span className="conn-ok">{isAgentModel ? '✓ agents’ model' : '✓ ready'}</span>
     </div>
   );
 }
@@ -201,24 +223,37 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
         )}
       </div>
 
-      {list.length === 0 && !adding && (
+      {connectors.loading && <p className="dim">Loading connectors…</p>}
+
+      {!connectors.loading && connectors.offline && (
         <div className="setup-note">
-          <p><b>No connectors yet.</b> Agents can talk, but not act.</p>
-          <p className="dim">Add a remote MCP server (Supabase, Jira, Exa, …).</p>
+          <p><b>Couldn’t reach connector settings.</b></p>
+          <p className="dim">The harness is up but its connector endpoint didn’t respond — refresh to retry.</p>
         </div>
       )}
 
-      {list.length > 0 && (
-        <div className="intg-list">
-          {list.map((c) => (
-            <ConnectorRow
-              key={c.name}
-              connector={c}
-              state={connectState[c.name] ?? 'idle'}
-              onConnect={(win) => void connect(c.name, win)}
-            />
-          ))}
-        </div>
+      {!connectors.loading && !connectors.offline && (
+        <>
+          {list.length === 0 && !adding && (
+            <div className="setup-note">
+              <p><b>No connectors yet.</b> Agents can talk, but not act.</p>
+              <p className="dim">Add a remote MCP server (Supabase, Jira, Exa, …).</p>
+            </div>
+          )}
+
+          {list.length > 0 && (
+            <div className="intg-list">
+              {list.map((c) => (
+                <ConnectorRow
+                  key={c.name}
+                  connector={c}
+                  state={connectState[c.name] ?? 'idle'}
+                  onConnect={(win) => void connect(c.name, win)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {adding && <ConnectorForm connectors={connectors} onDone={() => setAdding(false)} />}

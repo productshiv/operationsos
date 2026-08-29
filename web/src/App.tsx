@@ -6,6 +6,7 @@ import { Setup } from './setup/Setup';
 import { useHarnessStatus } from './lib/useHarnessStatus';
 import { useConnectors } from './state/useConnectors';
 import { useModels } from './state/useModels';
+import { AGENT_MODEL } from './lib/agents';
 import './ui.css';
 
 export default function App() {
@@ -14,13 +15,16 @@ export default function App() {
   const models = useModels();
   const [setupOpen, setSetupOpen] = useState(false);
 
-  // Only nag when something actually needs doing: the harness is unreachable, a tool needs auth, or
-  // no model is configured (agents can't run without one). Don't nag while still probing.
-  const noModel = !models.loading && !models.offline && models.models.length === 0;
+  // Nag when something actually needs doing. The model check is for the *exact* model every agent
+  // runs on (AGENT_MODEL) — an unrelated provider doesn't make agents runnable — and a failure to
+  // list models is itself worth flagging, since we then can't confirm agents have a usable model.
+  const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === AGENT_MODEL);
+  const missingModel = !models.loading && !models.offline && !hasAgentModel;
   const needsAttention =
     connectors.offline ||
+    models.offline ||
     connectors.connectors.some((c) => c.status === 'auth_required') ||
-    noModel;
+    missingModel;
 
   return (
     <div className="app">
