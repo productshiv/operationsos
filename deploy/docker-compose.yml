@@ -1,0 +1,69 @@
+# OperationsOS — full stack for Coolify (or any Docker host).
+#
+# Brings up the TrueForge harness (Postgres + Redis) and the OperationsOS
+# frontend, which serves the app and reverse-proxies /tf -> the harness on the
+# internal network, so the browser only talks to one origin (no CORS).
+#
+# Only the `web` service is published; the harness is reachable only via /tf.
+# Set secrets in deploy/.env (see .env.example).
+
+name: operationsos
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trueforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trueforge}
+      POSTGRES_DB: ${POSTGRES_DB:-trueforge}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  harness:
+    image: tfy.jfrog.io/tfy-images/trueforge:0.2.0-rc.0-8e9f92d
+    environment:
+      NODE_ENV: production
+      PORT: 8790
+      STANDALONE: 'false'
+      # Public origin for MCP OAuth callbacks — set to your domain + /tf.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080/tf}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-trueforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trueforge}
+      POSTGRES_DB: ${POSTGRES_DB:-trueforge}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      - harness
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
