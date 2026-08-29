@@ -19,7 +19,7 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
 
   const submit = (text: string) => {
     const t = text.trim();
-    if (!t || busy) return;
+    if (!t || busy || pending) return;
     setDraft('');
     void send(t);
   };
@@ -74,10 +74,15 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
               {pending.toolCalls.map((tc) => tc.query && (
                 <pre key={tc.id} className="sql gold">{tc.query}</pre>
               ))}
+              {pending.toolCalls.some((tc) => tc.warn) && (
+                <div className="apwarn">
+                  ⚠ {pending.toolCalls.find((tc) => tc.warn)?.warn} Deny unless you expect this.
+                </div>
+              )}
             </div>
             <div className="aprow">
-              <button className="btn go" onClick={() => void decide('allow')}>Authorise</button>
-              <button className="btn" onClick={() => void decide('deny')}>Deny</button>
+              <button className="btn go" onClick={() => void decide('allow')} disabled={busy}>Authorise</button>
+              <button className="btn" onClick={() => void decide('deny')} disabled={busy}>Deny</button>
             </div>
             <div className="aphint">Nothing runs against the database until you authorise.</div>
           </div>
@@ -86,7 +91,7 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
 
       <div className="chips">
         {agent.suggestions.map((s) => (
-          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy}>{s}</button>
+          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending}>{s}</button>
         ))}
       </div>
 
@@ -97,9 +102,9 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(draft); }}
           placeholder={`Ask ${agent.name}…`}
-          disabled={busy}
+          disabled={busy || !!pending}
         />
-        <button className="btn send" onClick={() => submit(draft)} disabled={busy}>Send</button>
+        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending}>Send</button>
       </div>
     </>
   );

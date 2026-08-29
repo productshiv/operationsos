@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
+import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
 
 export interface ToolActivity {
   id: string;
   server: string;
   tool: string;
   query?: string;
+  project?: string;
   result?: string;
 }
 export interface ChatItem {
@@ -19,6 +21,8 @@ export interface PendingCall {
   server: string;
   tool: string;
   query: string;
+  /** Non-empty when the proposed call breaks the read-only / pinned-project policy. */
+  warn?: string;
 }
 export interface Pending {
   threadId: string;
@@ -41,38 +45,52 @@ interface StreamEvent {
   id?: string;
   threadId?: string;
   content?: string | null;
-  toolCalls?: Array<{ id?: string; index?: number; function?: { name?: string; arguments?: string } }>;
+  /** Delta tool-call fragments (model.message) or ToolCallRefs (tool.approval_required). */
+  toolCalls?: Array<{
+    id?: string;
+    index?: number;
+    sourceEventId?: string;
+    function?: { name?: string; arguments?: string };
+  }>;
   toolCallId?: string;
-  state?: { status?: string } | null;
 }
 
 /**
- * The harness wraps MCP calls as `call_tool({ mcp_server, tool_name, input })`, so the useful
- * label is the inner tool and the SQL sits at `input.query`. Arguments stream in fragments, so a
- * mid-stream JSON.parse can fail — that's fine, it resolves once complete.
+ * The harness wraps MCP calls as `call_tool({ mcp_server, tool_name, input })` when tools are
+ * deferred; with `preload` the tool (e.g. execute_sql) is called directly. Either way we surface
+ * the inner tool, the SQL, and the project id. Arguments stream in fragments, so a mid-stream
+ * JSON.parse can fail — that's fine, it resolves once complete.
  */
 function readTool(tc: RawToolCall): ToolActivity {
   let server = '';
   let tool = tc.function.name || 'tool';
   let query: string | undefined;
+  let project: string | undefined;
   try {
     const a = JSON.parse(tc.function.arguments || '{}');
     if (tc.function.name === 'call_tool') {
-      // deferred wrapper: call_tool({ mcp_server, tool_name, input })
       server = a.mcp_server ?? '';
       tool = a.tool_name ?? 'call_tool';
-      query = a.input?.query ?? (a.input ? JSON.stringify(a.input) : undefined);
+      query = a.input?.query;
+      project = a.input?.project_id;
     } else if (tc.function.name === 'list_tools') {
       server = a.mcp_server ?? '';
       tool = 'list tools';
     } else {
-      // preloaded tool called directly, e.g. execute_sql({ project_id, query })
       query = typeof a.query === 'string' ? a.query : undefined;
+      project = typeof a.project_id === 'string' ? a.project_id : undefined;
     }
   } catch {
     /* partial args mid-stream */
   }
-  return { id: tc.id, server, tool, query };
+  return { id: tc.id, server, tool, query, project };
+}
+
+/** Client-side policy check surfaced at the approval gate (defence-in-depth; the human decides). */
+function policyWarning(t: ToolActivity): string | undefined {
+  if (t.query && !/^\s*(with|select)\b/i.test(t.query)) return 'This is not a read-only SELECT.';
+  if (t.project && t.project !== WEATHERAPI_PROJECT_REF) return 'Targets a different project.';
+  return undefined;
 }
 
 export function useAgentChat(spec: Record<string, unknown>) {
@@ -149,21 +167,26 @@ export function useAgentChat(spec: Record<string, unknown>) {
         break;
       case 'tool.approval_required': {
         const threadId = ev.threadId ?? 'main';
-        const calls: PendingCall[] = (ev.toolCalls ?? []).map((c) => {
-          let found: RawToolCall | undefined;
-          for (const b of basesRef.current.values()) {
-            found = b.toolCalls.find((t) => t && t.id === c.id);
-            if (found) break;
+        const toolCalls: PendingCall[] = (ev.toolCalls ?? []).map((ref) => {
+          // ToolCallRef: resolve through the model.message that requested the call.
+          const base = ref.sourceEventId ? basesRef.current.get(ref.sourceEventId) : undefined;
+          let raw = base?.toolCalls.find((t) => t && t.id === ref.id);
+          if (!raw) {
+            for (const b of basesRef.current.values()) {
+              raw = b.toolCalls.find((t) => t && t.id === ref.id);
+              if (raw) break;
+            }
           }
-          const info = found ? readTool(found) : undefined;
+          const info = raw ? readTool(raw) : undefined;
           return {
-            id: c.id ?? info?.id ?? '',
+            id: ref.id ?? info?.id ?? '',
             server: info?.server ?? '',
             tool: info?.tool ?? 'tool',
             query: info?.query ?? '',
+            warn: info ? policyWarning(info) : undefined,
           };
         });
-        setPending({ threadId, toolCalls: calls });
+        setPending({ threadId, toolCalls });
         break;
       }
       case 'turn.done':
@@ -180,7 +203,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const send = useCallback(
     async (text: string) => {
       const t = text.trim();
-      if (busy || !t) return;
+      if (busy || pending || !t) return; // don't start a turn while a checkpoint is open
       const key = `user:${counterRef.current++}`;
       userTextRef.current.set(key, t);
       orderRef.current.push(key);
@@ -201,19 +224,18 @@ export function useAgentChat(spec: Record<string, unknown>) {
         setBusy(false);
       }
     },
-    [busy, spec, rebuild],
+    [busy, pending, spec, rebuild],
   );
 
   const decide = useCallback(
     async (status: 'allow' | 'deny') => {
-      if (!pending || !sessionRef.current) return;
-      const p = pending;
-      setPending(null);
+      if (!pending || busy || !sessionRef.current) return;
+      const resolving = pending; // keep it until the resume is accepted, so failures can retry
       setBusy(true);
       try {
-        const input = p.toolCalls.map((tc) => ({
+        const input = resolving.toolCalls.map((tc) => ({
           type: 'user.tool_approval',
-          threadId: p.threadId,
+          threadId: resolving.threadId,
           toolCallId: tc.id,
           approval: status === 'allow' ? { status: 'allow' } : { status: 'deny' },
         }));
@@ -221,13 +243,15 @@ export function useAgentChat(spec: Record<string, unknown>) {
           input: input as never,
         });
         await consume(stream as never);
+        // Clear only if the resume didn't raise a fresh checkpoint.
+        setPending((cur) => (cur === resolving ? null : cur));
       } catch (e) {
-        note(`⚠ ${(e as Error).message}`);
+        note(`⚠ ${(e as Error).message} — the checkpoint is still open; try again.`);
       } finally {
         setBusy(false);
       }
     },
-    [pending, rebuild],
+    [pending, busy, rebuild],
   );
 
   return { items, busy, pending, send, decide };

@@ -743,6 +743,12 @@ code {
   font-size: 11px;
   color: var(--gold-ink);
 }
+.apwarn {
+  font-size: 12px;
+  color: var(--crit);
+  border: 2px solid var(--crit);
+  padding: 6px 8px;
+}
 
 .chips {
   display: flex;
