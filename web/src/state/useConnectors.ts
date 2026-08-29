@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { authorizeConnector, listConnectors, type Connector } from '../lib/connectors';
+import {
+  authorizeConnector,
+  createConnector,
+  listConnectors,
+  type Connector,
+  type CreateConnectorInput,
+} from '../lib/connectors';
 
 export interface ConnectorsState {
   loading: boolean;
@@ -10,6 +16,9 @@ export interface ConnectorsState {
 
 /** Per-connector state while the CEO is authorising it. */
 export type ConnectState = 'idle' | 'authorizing' | 'error';
+
+/** State while the CEO is registering a new connector. */
+export type AddState = 'idle' | 'saving' | 'error';
 
 /**
  * Loads the harness's MCP connectors and runs a real authorize flow.
@@ -23,6 +32,7 @@ export type ConnectState = 'idle' | 'authorizing' | 'error';
 export function useConnectors() {
   const [state, setState] = useState<ConnectorsState>({ loading: true, offline: false, connectors: [] });
   const [connectState, setConnectState] = useState<Record<string, ConnectState>>({});
+  const [addState, setAddState] = useState<AddState>('idle');
 
   const refresh = useCallback(async () => {
     try {
@@ -67,5 +77,21 @@ export function useConnectors() {
     [refresh],
   );
 
-  return { ...state, connectState, refresh, connect };
+  const add = useCallback(
+    async (input: CreateConnectorInput): Promise<boolean> => {
+      setAddState('saving');
+      try {
+        await createConnector(input);
+        await refresh();
+        setAddState('idle');
+        return true;
+      } catch {
+        setAddState('error');
+        return false;
+      }
+    },
+    [refresh],
+  );
+
+  return { ...state, connectState, addState, refresh, connect, add };
 }

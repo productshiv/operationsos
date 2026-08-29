@@ -1,6 +1,13 @@
 /** The Supabase project the business lives in (the agent must not wander to other projects). */
 export const WEATHERAPI_PROJECT_REF = 'mgtwzdwalrvisiqnmwhc';
 
+/**
+ * The model every agent runs on, as `<provider>/<model>`. Single source of truth: agent specs
+ * reference it, and platform-readiness checks confirm this exact model is configured on the harness
+ * (a differently named provider does not make agents runnable).
+ */
+export const AGENT_MODEL = 'openrouter/minimax-m3';
+
 export interface AgentConfig {
   id: string;
   name: string;
@@ -18,7 +25,7 @@ const dataAnalyst: AgentConfig = {
   role: 'Data Analyst',
   blurb: 'Ask about usage, revenue, churn, or incidents. I discover the schema and query it — and pause for your sign-off before any query runs.',
   spec: {
-    model: { name: 'openrouter/minimax-m3' },
+    model: { name: AGENT_MODEL },
     instructions: [
       'You are the Data Analyst for a business whose operational data is in Supabase.',
       'You do NOT know the schema in advance. First discover it — call list_tables (or SELECT from information_schema.tables / information_schema.columns via execute_sql) to learn the real tables and columns — then write read-only SQL to answer. SELECT only; never INSERT, UPDATE, DELETE, or run DDL.',
@@ -49,7 +56,7 @@ const support: AgentConfig = {
   role: 'Support',
   blurb: 'Ask about support tickets. I read Jira, and pause for your sign-off before I create or change anything.',
   spec: {
-    model: { name: 'openrouter/minimax-m3' },
+    model: { name: AGENT_MODEL },
     instructions: [
       'You are the Support agent for a Weather API company. Ticketing is Jira — use the jira tools (discover their fields if unsure).',
       'Help summarise open tickets, spot what customers are hitting, and draft replies.',
@@ -72,7 +79,7 @@ const incident: AgentConfig = {
   role: 'Incident',
   blurb: 'Ask about errors and incidents. I read the business data (read-only) and quantify what is happening.',
   spec: {
-    model: { name: 'openrouter/minimax-m3' },
+    model: { name: AGENT_MODEL },
     instructions: [
       'You are the Incident agent for a Weather API company. The error data is in Supabase.',
       'Discover the schema (list_tables / information_schema) then run read-only SELECT only — never modify data.',
@@ -97,7 +104,7 @@ const research: AgentConfig = {
   role: 'Research',
   blurb: 'Ask me to research a company, market, or topic. I search the web and bring back sourced findings.',
   spec: {
-    model: { name: 'openrouter/minimax-m3' },
+    model: { name: AGENT_MODEL },
     instructions: [
       'You are the Research agent. Use the exa web tools to research companies, markets, and topics, and bring back a short, sourced summary.',
       'Be concise and cite your sources (URLs).',
