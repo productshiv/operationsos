@@ -1,0 +1,24 @@
+:root {
+  --paper: #0c0d10;
+  --ink: #f1f1ec;
+  --line: #28323f;
+  --dim: #8b98a6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  -webkit-font-smoothing: antialiased;
+}
