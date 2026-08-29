@@ -8,6 +8,8 @@ export interface ToolActivity {
   tool: string;
   query?: string;
   project?: string;
+  /** Pretty-printed tool arguments (the payload) — shown at the gate for non-SQL tools. */
+  input?: string;
   result?: string;
 }
 export interface ChatItem {
@@ -21,6 +23,8 @@ export interface PendingCall {
   server: string;
   tool: string;
   query: string;
+  /** Pretty-printed arguments (the payload) — what the tool will actually do. */
+  input?: string;
   /** Non-empty when the proposed call breaks the read-only / pinned-project policy. */
   warn?: string;
 }
@@ -66,6 +70,7 @@ function readTool(tc: RawToolCall): ToolActivity {
   let tool = tc.function.name || 'tool';
   let query: string | undefined;
   let project: string | undefined;
+  let input: string | undefined;
   try {
     const a = JSON.parse(tc.function.arguments || '{}');
     if (tc.function.name === 'call_tool') {
@@ -73,17 +78,19 @@ function readTool(tc: RawToolCall): ToolActivity {
       tool = a.tool_name ?? 'call_tool';
       query = a.input?.query;
       project = a.input?.project_id;
+      input = a.input ? JSON.stringify(a.input, null, 2) : undefined;
     } else if (tc.function.name === 'list_tools') {
       server = a.mcp_server ?? '';
       tool = 'list tools';
     } else {
       query = typeof a.query === 'string' ? a.query : undefined;
       project = typeof a.project_id === 'string' ? a.project_id : undefined;
+      input = Object.keys(a).length ? JSON.stringify(a, null, 2) : undefined;
     }
   } catch {
     /* partial args mid-stream */
   }
-  return { id: tc.id, server, tool, query, project };
+  return { id: tc.id, server, tool, query, project, input };
 }
 
 /** Client-side policy check surfaced at the approval gate (defence-in-depth; the human decides). */
@@ -183,6 +190,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
             server: info?.server ?? '',
             tool: info?.tool ?? 'tool',
             query: info?.query ?? '',
+            input: info?.input,
             warn: info ? policyWarning(info) : undefined,
           };
         });

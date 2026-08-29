@@ -5,6 +5,8 @@ export interface AgentConfig {
   id: string;
   name: string;
   role: string;
+  /** One-line empty-state description shown before the first message. */
+  blurb: string;
   /** Inline TrueForge AgentSpec passed when opening a session. */
   spec: Record<string, unknown>;
   suggestions: string[];
@@ -14,6 +16,7 @@ const dataAnalyst: AgentConfig = {
   id: 'analyst',
   name: 'Analyst',
   role: 'Data Analyst',
+  blurb: 'Ask about usage, revenue, churn, or incidents. I discover the schema and query it — and pause for your sign-off before any query runs.',
   spec: {
     model: { name: 'openrouter/minimax-m3' },
     instructions: [
@@ -44,6 +47,7 @@ const support: AgentConfig = {
   id: 'medic',
   name: 'Medic',
   role: 'Support',
+  blurb: 'Ask about support tickets. I read Jira, and pause for your sign-off before I create or change anything.',
   spec: {
     model: { name: 'openrouter/minimax-m3' },
     instructions: [
@@ -66,6 +70,7 @@ const incident: AgentConfig = {
   id: 'watch',
   name: 'Watch',
   role: 'Incident',
+  blurb: 'Ask about errors and incidents. I read the business data (read-only) and quantify what is happening.',
   spec: {
     model: { name: 'openrouter/minimax-m3' },
     instructions: [
@@ -90,6 +95,7 @@ const research: AgentConfig = {
   id: 'scout',
   name: 'Scout',
   role: 'Research',
+  blurb: 'Ask me to research a company, market, or topic. I search the web and bring back sourced findings.',
   spec: {
     model: { name: 'openrouter/minimax-m3' },
     instructions: [
