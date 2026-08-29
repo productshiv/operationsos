@@ -8,6 +8,7 @@ const KEYMAP: Record<string, Dir> = {
   w: 'up', s: 'down', a: 'left', d: 'right',
   W: 'up', S: 'down', A: 'left', D: 'right',
 };
+const INTERACT_KEYS = new Set(['e', 'E', 'Enter', ' ']);
 
 const SPEED = 2.5;
 const FEET_W = 18;
@@ -21,19 +22,30 @@ function collides(x: number, y: number, w: number, h: number): boolean {
 
 /**
  * Drives the CEO avatar: keyboard (arrows/WASD) + touch, per-axis collision against desks, a
- * walk animation, and which desk (if any) is in reach. Position lives in a ref and is written
- * straight to the element's transform each frame, so movement never re-renders React; only the
- * nearby-desk id — which changes rarely — is state.
+ * walk animation, which desk (if any) is in reach, and firing `onInteract` for it. Position lives
+ * in a ref and is written straight to the element's transform each frame, so movement never
+ * re-renders React; only the nearby-desk id — which changes rarely — is state.
  */
-export function useCeo(ceoRef: RefObject<HTMLDivElement | null>) {
+export function useCeo(ceoRef: RefObject<HTMLDivElement | null>, onInteract?: (id: string) => void) {
   const [nearId, setNearId] = useState<string | null>(null);
   const keys = useRef<Record<Dir, boolean>>({ up: false, down: false, left: false, right: false });
+  const interactRef = useRef(onInteract);
+  useEffect(() => { interactRef.current = onInteract; }, [onInteract]);
 
   const press = (dir: Dir) => { keys.current[dir] = true; };
   const release = (dir: Dir) => { keys.current[dir] = false; };
 
   useEffect(() => {
+    let nearNow: string | null = null;
+
+    const resetKeys = () => {
+      keys.current.up = keys.current.down = keys.current.left = keys.current.right = false;
+    };
     const onKeyDown = (e: KeyboardEvent) => {
+      if (INTERACT_KEYS.has(e.key)) {
+        if (nearNow) { interactRef.current?.(nearNow); e.preventDefault(); }
+        return;
+      }
       const dir = KEYMAP[e.key];
       if (dir) { keys.current[dir] = true; e.preventDefault(); }
     };
@@ -41,20 +53,26 @@ export function useCeo(ceoRef: RefObject<HTMLDivElement | null>) {
       const dir = KEYMAP[e.key];
       if (dir) keys.current[dir] = false;
     };
+    // A held key whose keyup is lost during focus loss would latch on; clear on blur/hide.
+    const onVisibility = () => { if (document.hidden) resetKeys(); };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', resetKeys);
+    document.addEventListener('visibilitychange', onVisibility);
 
     const pos = { x: 470, y: 300 };
     let facing = 1;
     let stepTimer = 0;
     let stepFrame = false;
-    let nearNow: string | null = null;
     let last = 0;
     let raf = 0;
+    const spriteEl = ceoRef.current?.querySelector('svg') as SVGElement | null;
 
     const applyTransform = () => {
       const el = ceoRef.current;
-      if (el) el.style.transform = `translate(${pos.x - 13}px, ${pos.y - 28}px) scaleX(${facing})`;
+      if (el) el.style.transform = `translate(${pos.x - 13}px, ${pos.y - 28}px)`;
+      // Flip only the sprite, so the "YOU" label and shadow stay upright.
+      if (spriteEl) spriteEl.style.transform = `scaleX(${facing})`;
     };
     applyTransform();
 
@@ -107,6 +125,8 @@ export function useCeo(ceoRef: RefObject<HTMLDivElement | null>) {
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', resetKeys);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [ceoRef]);
 

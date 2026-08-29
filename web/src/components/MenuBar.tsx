@@ -7,7 +7,8 @@ function useClock(): string {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  return now.toISOString().slice(11, 19);
+  // Local time — the bar shows no timezone label, so UTC would mislead non-UTC users.
+  return now.toLocaleTimeString([], { hour12: false });
 }
 
 function toggleTheme() {

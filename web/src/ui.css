@@ -343,6 +343,9 @@
   height: 34px;
   z-index: 8;
 }
+.ceo svg {
+  transform-origin: center center;
+}
 .ceo .tag {
   position: absolute;
   left: 50%;
@@ -394,6 +397,71 @@
 .prompt .k {
   border: 2px solid var(--paper);
   padding: 0 3px;
+}
+
+/* ---------------- DESK WINDOW ---------------- */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+}
+.scrim.on {
+  display: block;
+}
+.win {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 92vw);
+  max-height: 82%;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow: 7px 7px 0 var(--sh);
+  display: flex;
+  flex-direction: column;
+}
+.win .wtb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 7px;
+  border-bottom: 2px solid var(--ink);
+  background: repeating-linear-gradient(var(--ink) 0 1px, transparent 1px 3px);
+  flex: 0 0 auto;
+}
+.win .cb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+  padding: 0;
+}
+.win .cb:active {
+  background: var(--ink);
+}
+.win .wt {
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  background: var(--panel);
+  padding: 0 5px;
+  text-transform: uppercase;
+}
+.wbody {
+  padding: 16px;
+  overflow: auto;
+}
+.wbody p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.wbody b {
+  font-weight: 700;
 }
 
 /* ---------------- TOUCH ---------------- */
@@ -547,5 +615,12 @@
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
+  }
+  /* Without the marquee, drop the leading offset so events aren't parked off-screen. */
+  .tmove {
+    padding-left: 0;
+  }
+  .twrap {
+    overflow-x: auto;
   }
 }
