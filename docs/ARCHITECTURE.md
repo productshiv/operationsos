@@ -70,3 +70,6 @@ actions wait in the Inbox** → human authorises → agents execute → session 
 | 2026-08-29 | Fonts: Silkscreen (chrome) + JetBrains Mono (reading text) | Pixel body font was unreadable; mono reads as a real terminal |
 | 2026-08-29 | Agents boot on ONE essential tool (Analyst = Warehouse); BI/Gmail are enhancers | Matches reality; lets partial setups work |
 | 2026-08-29 | Ship v1 = shell + Data Analyst end-to-end; other 6 agents shown as roadmap | Rules reward one job done end-to-end over many half-built |
+| 2026-08-29 | The business = an external Weather API company; its data lives in Supabase (`public.oos_*`), fed by a separate service (`weather-business/`, hosted on Coolify) — see [BUSINESS.md](BUSINESS.md) | Keeps the app repo clean and mirrors production: the business is real and external, not bundled with the app |
+| 2026-08-29 | Agents discover the DB schema at runtime (MCP `list_tables` / `information_schema`), never hardcode table names | Makes OperationsOS portable to any connected business, not just the demo's `oos_*` tables |
+| 2026-08-29 | Multi-tenant (each project its own isolated container) is the roadmap finale, not the submission | Keeps scope to "one job end-to-end"; TrueForge connectors are instance-global today |

@@ -476,6 +476,16 @@
   opacity: 1;
   text-decoration: underline;
 }
+.menubar .m-btn {
+  display: inline-flex;
+  align-items: center;
+}
+.m-warn {
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  margin-left: 6px;
+}
 .win.setup {
   width: min(560px, 94vw);
 }
@@ -585,6 +595,215 @@ code {
   font-size: 11px;
   color: var(--crit);
   margin-top: 3px;
+}
+
+/* ---------------- AGENT CHAT ---------------- */
+.win.chatwin {
+  height: min(600px, 86%);
+}
+.win.chatwin .wbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.aghead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 9px;
+  flex: 0 0 auto;
+}
+.aghead .agname {
+  font-size: 15px;
+}
+.chatlog {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-right: 2px;
+}
+.msg {
+  max-width: 92%;
+  border: 2px solid var(--ink);
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.msg .who {
+  font-family: 'Silkscreen', monospace;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.msg.ag {
+  align-self: flex-start;
+  background: var(--panel);
+}
+.msg.me {
+  align-self: flex-end;
+  background: var(--ink);
+  color: var(--paper);
+}
+.msg .mtext {
+  white-space: pre-wrap;
+}
+.toolcard {
+  border: 2px solid var(--ink);
+  background: var(--sink);
+  margin: 6px 0;
+}
+.toolhd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--ink);
+}
+.tok {
+  font-family: 'Silkscreen', monospace;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.tok.ok {
+  color: var(--good);
+  opacity: 1;
+}
+.sql {
+  margin: 0;
+  padding: 8px 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+.toolres {
+  padding: 7px 9px;
+  border-top: 2px dotted var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0.85;
+}
+.typing {
+  font-size: 12px;
+}
+
+/* the gold authorisation gate, inline in the thread — the only colour */
+.approval {
+  border: 2px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.aphd {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.apdot {
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+}
+.apbody p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.sql.gold {
+  border: 2px solid var(--gold);
+}
+.aprow {
+  display: flex;
+  gap: 9px;
+}
+.aphint {
+  font-size: 11px;
+  color: var(--gold-ink);
+}
+.apwarn {
+  font-size: 12px;
+  color: var(--crit);
+  border: 2px solid var(--crit);
+  padding: 6px 8px;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+.qchip {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 5px 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+}
+.qchip:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.qchip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.composer {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+  border-top: 2px solid var(--ink);
+  padding-top: 10px;
+}
+.cin {
+  flex: 1;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 14px;
+  outline: none;
+}
+.cin::placeholder {
+  color: var(--ink);
+  opacity: 0.45;
+}
+.cin:focus {
+  outline: 2px dashed var(--ink);
+  outline-offset: 1px;
+}
+.btn.send {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  font-size: 10px;
 }
 
 /* ---------------- TOUCH ---------------- */

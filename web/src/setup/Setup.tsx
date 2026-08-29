@@ -8,8 +8,14 @@ import type { Connector } from '../lib/connectors';
  * the real authorize flow. Agents can only act once their tools are connected — so this is where
  * the harness's MCP layer becomes visible.
  */
-export function Setup({ onClose }: { onClose: () => void }) {
-  const { loading, offline, connectors, connectState, refresh, connect } = useConnectors();
+export function Setup({
+  state,
+  onClose,
+}: {
+  state: ReturnType<typeof useConnectors>;
+  onClose: () => void;
+}) {
+  const { loading, offline, connectors, connectState, refresh, connect } = state;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -24,7 +30,7 @@ export function Setup({ onClose }: { onClose: () => void }) {
       <div className="win setup" role="dialog" aria-modal="true" aria-label="Setup">
         <div className="wtb">
           <button className="cb" aria-label="Close" onClick={onClose} />
-          <span className="wt">OperationsOS · Setup</span>
+          <span className="wt">OperationsOS · Integrations</span>
         </div>
 
         <div className="wbody setup-body">
