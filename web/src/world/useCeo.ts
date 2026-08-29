@@ -10,6 +10,19 @@ const KEYMAP: Record<string, Dir> = {
 };
 const INTERACT_KEYS = new Set(['e', 'E', 'Enter', ' ']);
 
+/**
+ * True when the keystroke belongs to a text field (form input, textarea, select, or any
+ * contenteditable). Movement keys (WASD/arrows) and interact keys (e/space/Enter) must yield to
+ * typing — otherwise entering an API key or chatting would walk the avatar and, worse, get
+ * swallowed by preventDefault.
+ */
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
 const SPEED = 2.5;
 const FEET_W = 18;
 const FEET_H = 10;
@@ -42,6 +55,7 @@ export function useCeo(ceoRef: RefObject<HTMLDivElement | null>, onInteract?: (i
       keys.current.up = keys.current.down = keys.current.left = keys.current.right = false;
     };
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return; // don't hijack keys while typing in a field
       if (INTERACT_KEYS.has(e.key)) {
         if (nearNow) { interactRef.current?.(nearNow); e.preventDefault(); }
         return;
