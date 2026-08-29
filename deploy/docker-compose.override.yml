@@ -1,0 +1,10 @@
+# Local-only overrides. `docker compose up` in this directory auto-merges this file,
+# so a plain local run publishes the web app on a host port you can open in a browser.
+#
+# Coolify does NOT load this: it invokes compose with an explicit
+# `-f docker-compose.yml`, which disables automatic override merging. There the `web`
+# service stays on `expose` only and Coolify's proxy routes your domain to it.
+services:
+  web:
+    ports:
+      - '${WEB_PORT:-8080}:80'

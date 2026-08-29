@@ -13,7 +13,9 @@ Only the `web` service is exposed; the harness is reachable solely through `/tf`
 3. Set environment variables (see [`.env.example`](.env.example)):
    - `PUBLIC_BASE_URL` — your Coolify domain **+ `/tf`**, e.g. `https://ops.example.com/tf`
    - (Postgres credentials are internal to the compose — nothing to set.)
-4. Point Coolify's domain at the **`web`** service (port 80).
+4. Set the **domain** on the **`web`** service — Coolify's proxy routes it to the container's
+   internal port **80**. (The compose deliberately publishes no host port; Coolify handles routing.
+   Publishing a host port bypasses the proxy and can fail with `port is already allocated`.)
 5. Deploy.
 
 ## First-run configuration (once)
@@ -41,7 +43,9 @@ docker compose up --build
 ```
 
 The Postgres credentials are fixed inside the compose (internal DB), so there is nothing to set for
-the database.
+the database. The host port (`WEB_PORT`, default `8080`) comes from
+[`docker-compose.override.yml`](docker-compose.override.yml), which only a local `docker compose up`
+loads — Coolify ignores it and routes your domain to the `web` service instead.
 
 ## Notes / known rough edges
 
