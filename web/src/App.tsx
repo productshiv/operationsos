@@ -4,19 +4,24 @@ import { Ticker } from './components/Ticker';
 import { Office } from './world/Office';
 import { Setup } from './setup/Setup';
 import { useHarnessStatus } from './lib/useHarnessStatus';
+import { useConnectors } from './state/useConnectors';
 import './ui.css';
 
 export default function App() {
   const conn = useHarnessStatus();
-  // First run opens on the connect-tools setup (the empty state); reopen it from the menu bar.
-  const [setupOpen, setSetupOpen] = useState(true);
+  const connectors = useConnectors();
+  const [setupOpen, setSetupOpen] = useState(false);
+
+  // Only nag when something actually needs doing — a tool needs auth, or the harness is unreachable.
+  const needsAttention =
+    connectors.offline || connectors.connectors.some((c) => c.status === 'auth_required');
 
   return (
     <div className="app">
-      <MenuBar conn={conn} onConnect={() => setSetupOpen(true)} />
+      <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} />
       <Office />
       <Ticker />
-      {setupOpen && <Setup onClose={() => setSetupOpen(false)} />}
+      {setupOpen && <Setup state={connectors} onClose={() => setSetupOpen(false)} />}
     </div>
   );
 }
