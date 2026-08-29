@@ -63,7 +63,10 @@ const support: AgentConfig = {
       'Creating or updating a Jira issue is irreversible and will pause for the CEO to authorise — propose it clearly (summary + description) and only after they approve does it get created.',
       'Be concise.',
     ].join(' '),
-    mcpServers: [{ name: 'jira', preload: true }],
+    // Atlassian Rovo MCP (Jira + Confluence). Named `atlassian`, not `jira`: the OAuth (DCR)
+    // client is registered per connector, and a connector first authorised before PUBLIC_BASE_URL
+    // was set stays pinned to that stale redirect with no way to re-register in this harness version.
+    mcpServers: [{ name: 'atlassian', preload: true }],
     config: { iterationLimit: 25 },
   },
   suggestions: [
