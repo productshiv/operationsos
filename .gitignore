@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+web/node_modules/
+
+# build output
+dist/
+web/dist/
+*.tsbuildinfo
+
+# env / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# local preview / scratch
+.preview-mock.html

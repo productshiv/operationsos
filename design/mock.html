@@ -1,0 +1,742 @@
+<!--
+  DIRECTION CONTRACT — OperationsOS · "The office as a 1-bit operating system"
+  THESIS: An OS you literally walk. Refuses the SaaS card-dashboard and the colourful Gather clone.
+    One rule governs everything: the ONLY colour in the whole world is the gold of an action
+    awaiting your authorisation. Colour = consequence.
+  OWN-WORLD: Black ink on cool paper, fine dot-dither for tone. Classic-GUI window chrome (title
+    bars, close boxes), marching-ants selection, hard 1px offset shadows, Chicago-style pixel caps
+    (Silkscreen) for chrome + a legible pixel body (Pixelify Sans, antialiased) for reading.
+    Night-shift = inverted. Gold #E7A81C is the single accent, reserved strictly for pending
+    authorisation. Night/day chosen from the scene: a founder at a desk, day shift and night shift.
+  STORY: First run = an empty office; you connect your tools (MCP) and each agent boots and starts
+    working. Then you walk the floor, read what each is doing, and when gold appears you go to your
+    Inbox and Authorise or Deny the irreversible actions. Nothing fires without you.
+  FIRST VIEWPORT: a Setup window over a dark, offline floor — "connect your tools to hire your
+    agents." Connect them and desks power on. Menu bar (OperationsOS · FILE TF-007 · clock · shift);
+    a bottom comms ticker (the live event stream); your Inbox with a gold badge when work waits.
+  FORM: candidate 5 of the grounded list (early OS GUI); staging = desktop plane with windowed
+    desks; seed 8fbbb819. Walk with arrows/WASD, E to interact; tap a desk on touch.
+-->
+<title>OperationsOS — Floor 7</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  /* ---- DAY palette (un-stamped default) ---- */
+  :root{
+    --paper:#F7F7F4; --ink:#15161A; --panel:#FFFFFF; --sink:#E9E9E4;
+    --gold:#E7A81C; --gold-ink:#7A5606;
+    --dot:rgba(21,22,26,.22); --sh:#15161A; color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#0C0D10; --ink:#F1F1EC; --panel:#171922; --sink:#20232C;
+      --gold:#F3BC3E; --gold-ink:#F3BC3E; --dot:rgba(241,241,236,.20); --sh:#000; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0C0D10; --ink:#F1F1EC; --panel:#171922; --sink:#20232C;
+    --gold:#F3BC3E; --gold-ink:#F3BC3E; --dot:rgba(241,241,236,.20); --sh:#000; color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:500;
+    font-size:16px;line-height:1.5;letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow:hidden;user-select:none;
+  }
+  .chi{font-family:'Silkscreen','JetBrains Mono',monospace;font-weight:700;letter-spacing:.02em}
+  button{font-family:inherit;color:inherit}
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  .app{display:flex;flex-direction:column;height:100dvh;width:100%}
+
+  /* ---------------- MENU BAR ---------------- */
+  .menubar{display:flex;align-items:center;gap:16px;height:36px;padding:0 12px;
+    background:var(--panel);border-bottom:2px solid var(--ink);flex:0 0 auto;z-index:40}
+  .menubar .logo{display:flex;align-items:center;gap:8px}
+  .menubar .logo .mk{width:16px;height:16px;background:var(--ink);
+    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+  .menubar .logo b{font-size:14px}
+  .menubar .m{font-size:10px;font-family:'Silkscreen',monospace;letter-spacing:.05em;opacity:.75;text-transform:uppercase;cursor:default}
+  .menubar .m.act{cursor:pointer;opacity:.9}
+  .menubar .m.act:hover{opacity:1;text-decoration:underline}
+  .menubar .spread{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .clock{font-family:'Silkscreen',monospace;font-size:12px;letter-spacing:.04em}
+  .clock .cc{animation:blink 1s steps(1) infinite}
+  .iconbtn{width:26px;height:26px;border:2px solid var(--ink);background:var(--panel);
+    display:grid;place-items:center;cursor:pointer;padding:0}
+  .iconbtn:active{background:var(--ink);color:var(--paper)}
+  .iconbtn svg{width:14px;height:14px;display:block}
+
+  /* ---------------- STAGE / WORLD ---------------- */
+  .viewport{position:relative;flex:1 1 auto;overflow:hidden;background:var(--paper);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1.4px);background-size:5px 5px}
+  .world{position:absolute;top:0;left:0;width:980px;height:580px;transform-origin:top left}
+
+  .rug{position:absolute;left:300px;top:210px;width:380px;height:190px;border:2px solid var(--ink);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1.4px);background-size:6px 6px;opacity:.9}
+  .rug::after{content:"OPERATIONS · FLOOR 7";position:absolute;inset:auto 0 6px 0;text-align:center;
+    font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.14em;opacity:.5}
+
+  /* ---------------- DESK ---------------- */
+  .desk{position:absolute;display:flex;flex-direction:column;cursor:pointer}
+  .desk .scr{position:relative;border:2px solid var(--ink);background:var(--panel);box-shadow:4px 4px 0 var(--sh);
+    display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .desk .tb{display:flex;align-items:center;gap:5px;height:17px;padding:0 4px;border-bottom:2px solid var(--ink);
+    background:repeating-linear-gradient(var(--ink) 0 1px,transparent 1px 3px)}
+  .desk .tb .cb{width:9px;height:9px;border:2px solid var(--ink);background:var(--panel);flex:0 0 auto}
+  .desk .tb .nm{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.02em;background:var(--panel);
+    padding:0 3px;text-transform:uppercase;white-space:nowrap}
+  .desk .disp{flex:1;padding:7px 8px;display:flex;flex-direction:column;gap:5px;justify-content:center;overflow:hidden}
+  .desk .stat{font-size:13px;line-height:1.2;opacity:.9}
+  /* "at work" progress sweep — reads as a query running, not an equaliser */
+  .workbar{height:13px;border:2px solid var(--ink);background:var(--panel);position:relative;overflow:hidden}
+  .workbar i{position:absolute;top:0;bottom:0;left:0;width:34%;background:var(--ink);
+    background-image:repeating-linear-gradient(90deg,var(--panel) 0 1px,transparent 1px 4px);
+    transform:translateX(-130%);animation:sweep 1.5s linear infinite}
+  /* the seated agent visibly types while online */
+  .desk:not(.off) .asvg{animation:atwork .8s steps(2) infinite}
+  .cursorline{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.04em}
+  .cursorline b{display:inline-block;width:6px;height:11px;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+
+  /* offline overlay */
+  .offlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:var(--sink);background-image:repeating-linear-gradient(45deg,var(--dot) 0 3px,transparent 3px 7px);z-index:3}
+  .offlay .ol{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.08em;background:var(--panel);
+    border:2px solid var(--ink);padding:2px 6px;text-transform:uppercase}
+  .offlay .sub{font-size:11px;opacity:.75}
+  .desk.off .offlay{display:flex}
+  .desk.off .asvg{opacity:.12}
+  .desk.off .plate{opacity:.4}
+  .desk.booting .scr{animation:flick .5s steps(2) 2}
+
+  .seat{align-self:center;margin-top:-2px;display:flex;flex-direction:column;align-items:center}
+  .plate{margin-top:2px;font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.07em;
+    border:2px solid var(--ink);padding:1px 5px;background:var(--panel);text-transform:uppercase}
+
+  .flag{position:absolute;left:50%;top:-26px;transform:translateX(-50%);display:none;
+    flex-direction:column;align-items:center;z-index:6}
+  .flag.on{display:flex;animation:hoist .4s steps(3) both}
+  .flag .pole{width:2px;height:16px;background:var(--ink)}
+  .flag .pn{position:absolute;top:0;left:2px;width:22px;height:12px;background:var(--gold);
+    border:2px solid var(--ink);clip-path:polygon(0 0,100% 0,100% 100%,0 100%,6px 50%);
+    display:grid;place-items:center;font-family:'Silkscreen',monospace;font-size:9px;color:#15161A}
+  .flag .pn::after{content:"!"}
+
+  .door{position:absolute;border:2px solid var(--ink);background:var(--sink);
+    background-image:repeating-linear-gradient(45deg,var(--dot) 0 3px,transparent 3px 7px);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:4px 4px 0 var(--sh)}
+  .door span{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.05em;
+    background:var(--panel);border:2px solid var(--ink);padding:2px 5px;text-transform:uppercase}
+
+  .inbox .tray{border:2px solid var(--ink);background:var(--panel);box-shadow:4px 4px 0 var(--sh);
+    width:100%;padding:8px;display:flex;flex-direction:column;gap:5px;align-items:center;position:relative}
+  .inbox .slot{width:88%;height:8px;border:2px solid var(--ink);background:var(--panel)}
+  .inbox .lbl{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.05em}
+  .inbox .badge{position:absolute;right:-8px;top:-10px;min-width:22px;height:22px;padding:0 4px;
+    background:var(--gold);border:2px solid var(--ink);display:none;place-items:center;
+    font-family:'Silkscreen',monospace;font-size:12px;color:#15161A;z-index:6}
+  .inbox .badge.on{display:grid;animation:pop .3s steps(3) both}
+
+  /* ---------------- SPRITES ---------------- */
+  .sprite{position:absolute;image-rendering:pixelated}
+  .sprite svg{display:block;shape-rendering:crispedges}
+  .ceo{width:26px;height:34px;z-index:8}
+  .ceo .tag{position:absolute;left:50%;top:-14px;transform:translateX(-50%);
+    font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.06em;
+    border:2px solid var(--ink);background:var(--panel);padding:0 3px}
+  .shadow{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);
+    width:20px;height:5px;border-radius:50%;background:var(--dot)}
+  .runner{width:16px;height:20px;z-index:7;display:none}
+  .runner.on{display:block}
+  .runner .tag{position:absolute;left:50%;top:-13px;transform:translateX(-50%);white-space:nowrap;
+    font-family:'Silkscreen',monospace;font-size:8px;border:2px solid var(--ink);background:var(--panel);padding:0 2px}
+  .legB{display:none}
+  .walk .legA{display:none}.walk .legB{display:block}
+
+  .route{position:absolute;left:0;top:0;pointer-events:none;z-index:5;display:none}
+  .route.on{display:block}
+  .route line{stroke:var(--ink);stroke-width:2;stroke-dasharray:2 5;animation:march 1s linear infinite}
+
+  .prompt{position:absolute;transform:translate(-50%,-100%);z-index:9;display:none;
+    align-items:center;gap:6px;padding:3px 8px;background:var(--ink);color:var(--paper);
+    font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.03em;white-space:nowrap;box-shadow:3px 3px 0 rgba(0,0,0,.25)}
+  .prompt.on{display:flex}
+  .prompt .k{border:2px solid var(--paper);padding:0 3px}
+
+  /* ---------------- overlay windows ---------------- */
+  .scrim{position:absolute;inset:0;z-index:50;display:none;background:transparent}
+  .scrim.on{display:block}
+  .setup-scrim{background:color-mix(in srgb,var(--paper) 55%,transparent)}
+  .win{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(440px,92vw);max-height:84%;background:var(--panel);border:2px solid var(--ink);
+    box-shadow:7px 7px 0 var(--sh);display:flex;flex-direction:column;animation:openwin .16s steps(3) both}
+  .win.wide{width:min(560px,94vw)}
+  .win .wtb{display:flex;align-items:center;gap:8px;height:26px;padding:0 7px;border-bottom:2px solid var(--ink);
+    background:repeating-linear-gradient(var(--ink) 0 1px,transparent 1px 3px);flex:0 0 auto}
+  .win .wtb .cb{width:14px;height:14px;border:2px solid var(--ink);background:var(--panel);cursor:pointer;padding:0}
+  .win .wtb .cb:active{background:var(--ink)}
+  .win .wtb .wt{font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.02em;background:var(--panel);
+    padding:0 5px;text-transform:uppercase}
+  .win.sel{outline:2px dashed var(--ink);outline-offset:2px;animation:openwin .16s steps(3) both, ants 1s linear infinite}
+  .wbody{padding:15px 16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+  .wbody h3.chi{font-size:14px;margin:0}
+  .wbody p{margin:0;font-size:15px}
+  .muted{opacity:.75}
+  .tag8{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.05em;border:2px solid var(--ink);
+    padding:2px 6px;display:inline-flex;align-items:center;gap:4px;text-transform:uppercase;white-space:nowrap}
+  .divide{height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 8px)}
+
+  .chart{border:2px solid var(--ink);background:var(--panel)}
+  .chart svg{display:block;width:100%;height:96px;shape-rendering:crispedges}
+  .figrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .figrow .big{font-family:'Silkscreen',monospace;font-size:16px}
+
+  .rrow{display:flex;align-items:center;gap:9px;font-size:14px}
+  .rrow .ck{width:15px;height:15px;border:2px solid var(--ink);display:grid;place-items:center;flex:0 0 auto}
+  .rrow .ck svg{width:10px;height:10px}
+
+  /* ---- agent chat ---- */
+  .win.chatwin{height:min(560px,84%)}
+  .win.chatwin .wbody{flex:1 1 auto;min-height:0;overflow:hidden}
+  .aghead{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:2px solid var(--ink);padding-bottom:9px;flex:0 0 auto}
+  .aghead .agname{font-size:15px}
+  .chatlog{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:9px;padding-right:2px}
+  .msg{max-width:85%;border:2px solid var(--ink);padding:8px 10px;font-size:14px;line-height:1.4}
+  .msg .who{font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.05em;opacity:.6;margin-bottom:3px;text-transform:uppercase}
+  .msg.ag{align-self:flex-start;background:var(--panel)}
+  .msg.me{align-self:flex-end;background:var(--ink);color:var(--paper)}
+  .msg .big{font-family:'Silkscreen',monospace;font-size:15px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}
+  .qchip{border:2px solid var(--ink);background:var(--panel);color:var(--ink);padding:5px 9px;
+    font-family:'JetBrains Mono';font-weight:500;font-size:12px;cursor:pointer}
+  .qchip:hover{background:var(--ink);color:var(--paper)}
+  .qchip:active{transform:translateY(1px)}
+  .composer{display:flex;gap:8px;flex:0 0 auto;border-top:2px solid var(--ink);padding-top:10px}
+  .cin{flex:1;border:2px solid var(--ink);background:var(--panel);color:var(--ink);padding:9px;
+    font-family:'JetBrains Mono';font-weight:500;font-size:14px;outline:none}
+  .cin::placeholder{color:var(--ink);opacity:.45}
+  .cin:focus{outline:2px dashed var(--ink);outline-offset:1px}
+  .btn.send{flex:0 0 auto;padding:9px 13px;font-size:10px}
+
+  /* ---- SETUP / connectors ---- */
+  .setuphead{display:flex;flex-direction:column;gap:5px}
+  .setuphead .big{font-family:'Silkscreen',monospace;font-size:14px}
+  .prog{display:flex;align-items:center;gap:9px;font-family:'Silkscreen',monospace;font-size:10px}
+  .progbar{flex:1;height:12px;border:2px solid var(--ink);background:var(--panel);position:relative}
+  .progbar i{position:absolute;inset:0;transform:scaleX(0);transform-origin:left center;background:var(--ink);
+    background-image:repeating-linear-gradient(45deg,var(--panel) 0 1px,transparent 1px 3px);transition:transform .3s steps(6)}
+  .conns{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .conn{border:2px solid var(--ink);background:var(--panel);padding:9px 10px;display:flex;flex-direction:column;gap:7px}
+  .conn .ct{display:flex;align-items:center;gap:8px}
+  .conn .ci{width:26px;height:26px;border:2px solid var(--ink);display:grid;place-items:center;flex:0 0 auto;
+    font-family:'Silkscreen',monospace;font-size:11px}
+  .conn .cn{font-size:14px;line-height:1.05}
+  .conn .cs{font-size:11px;opacity:.7}
+  .conn .cp{font-size:10px;font-family:'Silkscreen',monospace;letter-spacing:.03em;opacity:.7}
+  .conn .cbtn{margin-top:1px;border:2px solid var(--ink);background:var(--panel);cursor:pointer;
+    padding:7px;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    box-shadow:2px 2px 0 var(--sh);display:flex;align-items:center;justify-content:center;gap:5px}
+  .conn .cbtn:active{transform:translate(2px,2px);box-shadow:none}
+  .conn.busy .cbtn{opacity:.6;pointer-events:none}
+  .conn.done{background:var(--sink)}
+  .conn.done .cbtn{background:var(--ink);color:var(--paper);pointer-events:none}
+  .conn.done .ci{background:var(--ink);color:var(--paper)}
+  .setupfoot{display:flex;gap:9px;align-items:center}
+  .note{font-size:11px;opacity:.7;line-height:1.3}
+
+  .authhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .goldlbl{font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.06em;color:var(--gold-ink);
+    border:2px solid var(--gold);padding:2px 7px;display:inline-flex;align-items:center;gap:5px}
+  .goldlbl .bd{width:7px;height:7px;background:var(--gold)}
+  .act{display:flex;gap:10px;align-items:flex-start;padding:9px 0}
+  .act+.act{border-top:2px dotted var(--ink)}
+  .act .n{font-family:'Silkscreen',monospace;font-size:12px;width:16px;flex:0 0 auto}
+  .act .tx b{font-size:15px}.act .tx div{font-size:13px}
+  .act .irr{margin-left:auto;font-family:'Silkscreen',monospace;font-size:8px;letter-spacing:.05em;
+    border:2px solid var(--ink);background:var(--ink);color:var(--panel);padding:1px 5px;white-space:nowrap}
+  .gauge{display:flex;align-items:center;gap:12px}
+  .meter{width:150px;height:16px;border:2px solid var(--ink);background:var(--panel);position:relative}
+  .meter i{position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--ink);
+    background-image:repeating-linear-gradient(45deg,var(--panel) 0 1px,transparent 1px 3px)}
+  .meter b{position:absolute;right:-2px;top:-7px;bottom:-7px;width:3px;background:var(--ink)}
+  .gauge .gv b{font-family:'Silkscreen',monospace;font-size:17px}
+  .btnrow{display:flex;gap:9px;margin-top:2px}
+  .btn{flex:1;border:2px solid var(--ink);background:var(--panel);padding:11px;cursor:pointer;
+    font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.03em;box-shadow:3px 3px 0 var(--sh);
+    display:flex;align-items:center;justify-content:center;gap:6px;text-transform:uppercase}
+  .btn:active{transform:translate(3px,3px);box-shadow:none}
+  .btn.go{background:var(--gold);color:#15161A;border-color:var(--ink)}
+  .btn svg{width:14px;height:14px}
+  .authed{display:none;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:6px 0}
+  .stamp{font-family:'Silkscreen',monospace;font-size:15px;letter-spacing:.1em;border:3px solid var(--ink);
+    padding:6px 13px;transform:rotate(-5deg)}
+
+  /* ---------------- TICKER ---------------- */
+  .ticker{flex:0 0 auto;height:30px;border-top:2px solid var(--ink);background:var(--panel);
+    display:flex;align-items:center;overflow:hidden;position:relative;z-index:40}
+  .ticker .lead{flex:0 0 auto;height:100%;display:flex;align-items:center;padding:0 11px;
+    background:var(--ink);color:var(--panel);font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.05em}
+  .twrap{flex:1;overflow:hidden;white-space:nowrap}
+  .tmove{display:inline-block;padding-left:100%;animation:scrollx 60s linear infinite;
+    font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.02em}
+  .tmove .e{opacity:.6;margin:0 22px}
+  .tmove .e b{opacity:1}
+  .tmove .e.gold{color:var(--gold-ink);opacity:1}
+
+  /* ---------------- touch ---------------- */
+  .touch{position:absolute;inset:auto 0 36px 0;z-index:45;display:none;justify-content:space-between;padding:0 14px;pointer-events:none}
+  .dpad{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px);gap:4px;pointer-events:auto}
+  .dpad button{border:2px solid var(--ink);background:var(--panel);opacity:.92;cursor:pointer;display:grid;place-items:center;padding:0;font-size:14px}
+  .dpad button:active{background:var(--ink);color:var(--paper)}
+  .dpad .u{grid-area:1/2}.dpad .l{grid-area:2/1}.dpad .r{grid-area:2/3}.dpad .d{grid-area:3/2}
+  .abtn{align-self:flex-end;width:60px;height:60px;border:2px solid var(--ink);background:var(--panel);
+    color:var(--ink);font-family:'Silkscreen',monospace;font-size:17px;pointer-events:auto;cursor:pointer;box-shadow:3px 3px 0 var(--sh)}
+  .abtn:active{background:var(--ink);color:var(--paper)}
+  body.touch-on .touch{display:flex}
+  @media (pointer:coarse),(max-width:760px){.touch{display:flex}}
+
+  .hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:44;
+    background:var(--ink);color:var(--paper);font-family:'Silkscreen',monospace;font-size:10px;
+    letter-spacing:.03em;padding:6px 11px;box-shadow:3px 3px 0 rgba(0,0,0,.25);transition:opacity .4s}
+  .hint .k{border:2px solid var(--paper);padding:0 3px;margin:0 1px}
+
+  @keyframes blink{50%{opacity:0}}
+  @keyframes sweep{to{transform:translateX(360%)}}
+  @keyframes atwork{50%{transform:translateY(-1.5px)}}
+  @keyframes march{to{stroke-dashoffset:-14}}
+  @keyframes ants{to{outline-offset:2px}}
+  @keyframes scrollx{to{transform:translateX(-100%)}}
+  @keyframes hoist{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  @keyframes openwin{from{transform:translate(-50%,-50%) scale(.9)}to{transform:translate(-50%,-50%) scale(1)}}
+  @keyframes flick{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+  @media (max-width:640px){.win{width:94vw}.conns{grid-template-columns:1fr}}
+</style>
+
+<div class="app">
+  <div class="menubar">
+    <div class="logo"><span class="mk"></span><b class="chi">OperationsOS</b></div>
+    <span class="m act" id="mConnect">Connect</span><span class="m">File&nbsp;TF-007</span><span class="m">View</span>
+    <div class="spread">
+      <span class="clock chi" id="clock">08:07<span class="cc">:</span>42</span>
+      <button class="iconbtn" id="theme" title="Day / night shift" aria-label="Toggle day / night shift">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="world" id="world">
+      <div class="rug"></div>
+      <svg class="route" id="route" width="980" height="580"><line id="rline" x1="0" y1="0" x2="0" y2="0"/></svg>
+      <div id="desks"></div>
+
+      <div class="sprite runner" id="runner">
+        <div class="tag">HANDOFF</div>
+        <svg viewBox="0 0 16 20" width="16" height="20">
+          <rect x="5" y="1" width="6" height="5" fill="var(--ink)"/><rect x="4" y="6" width="8" height="7" fill="var(--ink)"/>
+          <g class="legA"><rect x="5" y="13" width="2" height="6" fill="var(--ink)"/><rect x="9" y="13" width="2" height="6" fill="var(--ink)"/></g>
+          <g class="legB"><rect x="4" y="13" width="2" height="6" fill="var(--ink)"/><rect x="10" y="13" width="2" height="6" fill="var(--ink)"/></g>
+        </svg>
+      </div>
+
+      <div class="sprite ceo" id="ceo">
+        <span class="tag">YOU</span><div class="shadow"></div>
+        <svg viewBox="0 0 26 34" width="26" height="34">
+          <rect x="9" y="2" width="8" height="7" fill="var(--ink)"/>
+          <rect x="8" y="4" width="1" height="4" fill="var(--ink)"/><rect x="17" y="4" width="1" height="4" fill="var(--ink)"/>
+          <rect x="6" y="10" width="14" height="12" fill="var(--ink)"/>
+          <rect x="12" y="11" width="2" height="7" fill="var(--paper)"/>
+          <rect x="3" y="11" width="3" height="9" fill="var(--ink)"/><rect x="20" y="11" width="3" height="9" fill="var(--ink)"/>
+          <g class="legA"><rect x="8" y="22" width="4" height="10" fill="var(--ink)"/><rect x="14" y="22" width="4" height="10" fill="var(--ink)"/></g>
+          <g class="legB"><rect x="7" y="22" width="4" height="10" fill="var(--ink)"/><rect x="15" y="22" width="4" height="10" fill="var(--ink)"/></g>
+        </svg>
+      </div>
+
+      <div class="prompt" id="prompt"><span class="k">E</span><span id="promptTx">Open</span></div>
+    </div>
+
+    <div class="touch">
+      <div class="dpad">
+        <button class="u" data-k="up" aria-label="Up">▲</button><button class="l" data-k="left" aria-label="Left">◀</button>
+        <button class="r" data-k="right" aria-label="Right">▶</button><button class="d" data-k="down" aria-label="Down">▼</button>
+      </div>
+      <button class="abtn" id="abtn" aria-label="Interact">E</button>
+    </div>
+
+    <div class="hint" id="hint"><span class="k">↑↓←→</span> / <span class="k">WASD</span> walk · <span class="k">E</span> interact</div>
+
+    <!-- desk / inbox window -->
+    <div class="scrim" id="scrim">
+      <div class="win sel" id="win" role="dialog" aria-modal="true">
+        <div class="wtb"><button class="cb" id="winClose" aria-label="Close"></button><span class="wt" id="winTitle">WINDOW</span></div>
+        <div class="wbody" id="winBody"></div>
+      </div>
+    </div>
+
+    <!-- SETUP overlay -->
+    <div class="scrim setup-scrim on" id="setupScrim">
+      <div class="win wide sel" id="setup" role="dialog" aria-modal="true">
+        <div class="wtb"><button class="cb" id="setupClose" aria-label="Close"></button><span class="wt">OperationsOS · Setup</span></div>
+        <div class="wbody">
+          <div class="setuphead">
+            <span class="big chi">Connect your tools.</span>
+            <p class="muted">Your agents can <b>talk</b> without them — but they can't <b>act</b>. Each tool is a live MCP connector; sign in to bring the agent that needs it online.</p>
+          </div>
+          <div class="prog"><span id="progN">0 / 6</span><span class="progbar"><i id="progI"></i></span></div>
+          <div class="conns" id="conns"></div>
+          <div class="setupfoot">
+            <button class="btn" id="connectAll" style="flex:0 0 auto">Connect all · demo</button>
+            <button class="btn" id="enterFloor">Enter the floor ▸</button>
+          </div>
+          <p class="note">Sign-in is simulated for this preview — in the real build each “Connect” opens the tool’s OAuth screen, exactly like TrueForge’s MCP connector flow.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <div class="lead">EVENT&nbsp;STREAM</div>
+    <div class="twrap"><div class="tmove" id="tmove"></div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var WORLD_W=980, WORLD_H=580;
+
+  document.getElementById('theme').addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme');
+    var next=cur?(cur==='dark'?'light':'dark'):(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark');
+    document.documentElement.setAttribute('data-theme',next);
+  });
+
+  (function(){var el=document.getElementById('clock');var t=Date.parse('2026-08-29T08:07:42Z');
+    setInterval(function(){t+=1000;var s=new Date(t).toISOString().substr(11,8);
+      el.innerHTML=s.substr(0,5)+'<span class="cc">:</span>'+s.substr(6,2);},1000);})();
+
+  var world=document.getElementById('world'), viewport=document.getElementById('viewport');
+  function fit(){var r=viewport.getBoundingClientRect();
+    var s=Math.min(r.width/WORLD_W,r.height/WORLD_H);
+    var ox=Math.max(0,(r.width-WORLD_W*s)/2), oy=Math.max(0,(r.height-WORLD_H*s)/2);
+    world.style.transform='translate('+ox+'px,'+oy+'px) scale('+s+')';}
+  window.addEventListener('resize',fit);
+
+  /* ---- desks ---- */
+  var desks=[
+    {id:'analyst',name:'ANALYST.rpt',plate:'ANALYST',x:66,y:78,w:172,h:96,kind:'agent',stat:'query running…',act:'bars'},
+    {id:'scout',name:'SCOUT.crm',plate:'SCOUT',x:404,y:66,w:168,h:92,kind:'agent',stat:'wrote profile → CRM',act:'cursor'},
+    {id:'handler',name:'HANDLER.op',plate:'HANDLER',x:748,y:78,w:176,h:96,kind:'agent',stat:'coordinating OP-4471',act:'cursor',flag:true},
+    {id:'medic',name:'MEDIC.tix',plate:'MEDIC',x:770,y:300,w:158,h:92,kind:'agent',stat:'2 tickets open',act:'bars'},
+    {id:'watch',name:'WATCH.mon',plate:'WATCH',x:770,y:448,w:158,h:92,kind:'agent',stat:'all systems nominal',act:'cursor'},
+    {id:'inbox',name:'INBOX',plate:'YOUR BOX',x:64,y:430,w:170,h:110,kind:'inbox'},
+    {id:'sales',name:'',plate:'SALES · v2',x:300,y:452,w:120,h:74,kind:'door'},
+    {id:'pm',name:'',plate:'PM · v2',x:470,y:452,w:120,h:74,kind:'door'}
+  ];
+  var deskById={}, deskLayer=document.getElementById('desks');
+  desks.forEach(function(d){
+    deskById[d.id]=d;
+    var el=document.createElement('div');
+    el.style.left=d.x+'px'; el.style.top=d.y+'px'; el.style.width=d.w+'px'; el.dataset.id=d.id;
+    if(d.kind==='door'){ el.className='door'; el.style.height=d.h+'px'; el.innerHTML='<span>'+d.plate+'</span>'; }
+    else if(d.kind==='inbox'){ el.className='desk inbox';
+      el.innerHTML='<div class="tray"><span class="badge" id="inboxBadge">1</span><div class="lbl chi">IN-TRAY</div>'
+        +'<div class="slot"></div><div class="slot"></div><div class="slot"></div></div>'
+        +'<div class="seat"><div class="plate">'+d.plate+'</div></div>'; }
+    else { el.className='desk off';
+      el.innerHTML='<div class="scr" style="height:'+(d.h-30)+'px">'
+        +'<div class="tb"><span class="cb"></span><span class="nm">'+d.name+'</span></div>'
+        +'<div class="disp">'
+          +(d.act==='bars'?'<div class="workbar"><i></i></div>'
+             :'<div class="cursorline">&gt; run <b></b></div>')
+          +'<div class="stat">'+d.stat+'</div>'
+        +'</div>'
+        +'<div class="offlay"><span class="ol">Offline</span><span class="sub">connect tools</span></div>'
+      +'</div>'
+      +'<div class="seat">'+agentSprite()+'<div class="plate">'+d.plate+'</div>'
+        +(d.flag?'<div class="flag" id="flag-handler"><div class="pole"></div><div class="pn"></div></div>':'')+'</div>'; }
+    el.addEventListener('click',function(){ interactWith(d.id); });
+    deskLayer.appendChild(el);
+  });
+  function agentSprite(){return '<svg class="asvg" viewBox="0 0 22 18" width="30" height="24" style="shape-rendering:crispedges">'
+    +'<rect x="8" y="0" width="6" height="5" fill="var(--ink)"/><rect x="5" y="5" width="12" height="8" fill="var(--ink)"/>'
+    +'<rect x="2" y="7" width="3" height="4" fill="var(--ink)"/><rect x="17" y="7" width="3" height="4" fill="var(--ink)"/></svg>';}
+
+  /* ---- collision ---- */
+  var SOLIDS=desks.map(function(d){return {x:d.x,y:d.y,w:d.w,h:d.h};});
+  function hit(x,y,w,h){for(var i=0;i<SOLIDS.length;i++){var s=SOLIDS[i];
+    if(x<s.x+s.w&&x+w>s.x&&y<s.y+s.h&&y+h>s.y)return true;}return false;}
+
+  /* ---- CEO ---- */
+  var ceo=document.getElementById('ceo'), cx=470, cy=300, spd=2.5;
+  var keys={up:false,down:false,left:false,right:false}, facing=1, moving=false, stepT=0, stepFrame=false;
+  function place(){ceo.style.transform='translate('+(cx-13)+'px,'+(cy-28)+'px) scaleX('+facing+')';}
+  place();
+  var keymap={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
+  window.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){closeWin();return;}
+    if(e.key==='e'||e.key==='E'||e.key===' '||e.key==='Enter'){if(nearId)interactWith(nearId);e.preventDefault();return;}
+    var k=keymap[e.key]; if(k){keys[k]=true;dismissHint();e.preventDefault();}
+  });
+  window.addEventListener('keyup',function(e){var k=keymap[e.key];if(k)keys[k]=false;});
+  document.querySelectorAll('.dpad button').forEach(function(b){var k=b.dataset.k;
+    var on=function(e){e.preventDefault();keys[k]=true;dismissHint();}, off=function(e){e.preventDefault();keys[k]=false;};
+    b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off);
+    b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off);});
+  document.getElementById('abtn').addEventListener('click',function(){if(nearId)interactWith(nearId);});
+  if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch-on');
+
+  var prompt=document.getElementById('prompt'), promptTx=document.getElementById('promptTx'), nearId=null;
+  function updateNear(){var best=null,bd=1e9;
+    desks.forEach(function(d){var pad=46,zx=d.x-pad,zy=d.y-pad,zw=d.w+pad*2,zh=d.h+pad*2;
+      if(cx>zx&&cx<zx+zw&&cy>zy&&cy<zy+zh){var dx=cx-(d.x+d.w/2),dy=cy-(d.y+d.h/2),ds=dx*dx+dy*dy;if(ds<bd){bd=ds;best=d;}}});
+    nearId=best?best.id:null;
+    if(best&&!winOpen&&!setupOpen){prompt.classList.add('on');
+      promptTx.textContent = best.kind==='door'?'Locked':best.kind==='inbox'?(pending?'Review':'Open'):(deskById[best.id]&&document.querySelector('[data-id="'+best.id+'"]').classList.contains('off')?'Connect':'Open');
+      prompt.style.left=(best.x+best.w/2)+'px';prompt.style.top=(best.y-6)+'px';}
+    else prompt.classList.remove('on');}
+
+  var last=0;
+  function loop(ts){var dt=Math.min(2,(ts-last)/16.67||1);last=ts;
+    var vx=(keys.right?1:0)-(keys.left?1:0), vy=(keys.down?1:0)-(keys.up?1:0);
+    moving=!!(vx||vy); if(vx)facing=vx>0?1:-1;
+    var fw=18,fh=10,fx,fy;
+    if(vx){var nx=cx+vx*spd*dt;fx=nx-fw/2;fy=cy+16-fh;if(nx>13&&nx<WORLD_W-13&&!hit(fx,fy,fw,fh))cx=nx;}
+    if(vy){var ny=cy+vy*spd*dt;fx=cx-fw/2;fy=ny+16-fh;if(ny>34&&ny<WORLD_H-6&&!hit(fx,fy,fw,fh))cy=ny;}
+    if(moving&&!reduce){stepT+=dt;if(stepT>7){stepT=0;stepFrame=!stepFrame;ceo.classList.toggle('walk',stepFrame);}}
+    else ceo.classList.remove('walk');
+    place();updateNear();stepRunner(dt);requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+
+  var hintEl=document.getElementById('hint'),hintGone=false;
+  function dismissHint(){if(hintGone)return;hintGone=true;hintEl.style.opacity='0';setTimeout(function(){hintEl.style.display='none';},500);}
+  setTimeout(dismissHint,9000);
+
+  /* ---- handoff runner ---- */
+  var runner=document.getElementById('runner'),route=document.getElementById('route'),rline=document.getElementById('rline'),handoff=null;
+  function seat(d){return {x:d.x+d.w/2,y:d.y+d.h+24};}
+  function startHandoff(){if(reduce||winOpen)return;
+    if(isOff('handler')||isOff('analyst'))return;
+    var from=seat(deskById.handler),to=seat(deskById.analyst),mid={x:from.x,y:to.y};
+    handoff={pts:[from,mid,to,mid,from],seg:0,t:0,dur:46};runner.classList.add('on');route.classList.add('on');
+    rline.setAttribute('x1',from.x);rline.setAttribute('y1',from.y);rline.setAttribute('x2',to.x);rline.setAttribute('y2',to.y);}
+  function stepRunner(dt){if(!handoff)return;handoff.t+=dt;var p=handoff.t/handoff.dur;
+    if(p>=1){handoff.t=0;handoff.seg++;if(handoff.seg>=handoff.pts.length-1){handoff=null;runner.classList.remove('on');route.classList.remove('on');return;}p=0;}
+    var a=handoff.pts[handoff.seg],b=handoff.pts[handoff.seg+1],x=a.x+(b.x-a.x)*p,y=a.y+(b.y-a.y)*p;
+    runner.style.transform='translate('+(x-8)+'px,'+(y-18)+'px) scaleX('+((b.x-a.x)<0?-1:1)+')';
+    if(!reduce){handoff.st=(handoff.st||0)+dt;if(handoff.st>6){handoff.st=0;runner.classList.toggle('walk');}}}
+  if(!reduce)setInterval(function(){if(!handoff&&!winOpen&&!pending&&opStarted)startHandoff();},11000);
+
+  /* ---- ticker ---- */
+  var tline=[{t:'08:00',ev:'system.idle',msg:'connect tools to hire your agents'}];
+  function renderTicker(){document.getElementById('tmove').innerHTML=tline.map(function(e){
+    return '<span class="e'+(e.gold?' gold':'')+'"><b>'+(e.t?e.t+' ':'')+e.ev+'</b>'+(e.msg?' · '+e.msg:'')+'</span>';}).join('');}
+  function push(t,ev,msg,gold){tline.push({t:t,ev:ev,msg:msg,gold:gold});if(tline.length>16)tline.shift();renderTicker();}
+  renderTicker();
+
+  /* ---- connectors / boot ---- */
+  var TOOLS=[
+    {id:'warehouse',name:'Warehouse',sub:'Postgres · read-only',powers:'Analyst',ic:'DB'},
+    {id:'bi',name:'Metabase',sub:'BI reports',powers:'Analyst',ic:'BI'},
+    {id:'crm',name:'HubSpot',sub:'CRM',powers:'Scout · Handler',ic:'CR'},
+    {id:'zendesk',name:'Zendesk',sub:'Support tickets',powers:'Medic',ic:'ZD'},
+    {id:'grafana',name:'Grafana',sub:'Monitoring',powers:'Watch',ic:'GF'},
+    {id:'gmail',name:'Gmail',sub:'Outreach',powers:'Handler',ic:'GM'}
+  ];
+  /* each agent needs ONE essential tool to come online; BI + Gmail are enhancers. */
+  var REQ={analyst:['warehouse'],scout:['crm'],handler:['crm'],medic:['zendesk'],watch:['grafana']};
+  var NAME={analyst:'Analyst',scout:'Scout',handler:'Handler',medic:'Medic',watch:'Watch'};
+  var connected={}, opStarted=false;
+  function isOff(id){var el=document.querySelector('[data-id="'+id+'"]');return el&&el.classList.contains('off');}
+
+  var connsEl=document.getElementById('conns');
+  TOOLS.forEach(function(tl){
+    var c=document.createElement('div');c.className='conn';c.dataset.id=tl.id;
+    c.innerHTML='<div class="ct"><span class="ci">'+tl.ic+'</span><div><div class="cn">'+tl.name+'</div><div class="cs">'+tl.sub+'</div></div></div>'
+      +'<div class="cp">powers ▸ '+tl.powers+'</div>'
+      +'<button class="cbtn">Connect</button>';
+    c.querySelector('.cbtn').addEventListener('click',function(){connect(tl.id);});
+    connsEl.appendChild(c);
+  });
+  function connect(id){
+    var c=document.querySelector('.conn[data-id="'+id+'"]'); if(!c||connected[id])return;
+    var btn=c.querySelector('.cbtn'); c.classList.add('busy'); btn.textContent='Authorising…';
+    var done=function(){connected[id]=true;c.classList.remove('busy');c.classList.add('done');
+      btn.innerHTML='Connected ✓';
+      var tl=TOOLS.filter(function(x){return x.id===id;})[0];
+      push('08:0'+Math.min(9,Object.keys(connected).length),'connector.authorized',tl.name+' → online');
+      updateProg(); bootCheck();};
+    if(reduce)done(); else setTimeout(done,650);
+  }
+  function updateProg(){var n=Object.keys(connected).length;
+    document.getElementById('progN').textContent=n+' / 6';
+    document.getElementById('progI').style.transform='scaleX('+(n/6)+')';}
+  function bootCheck(){Object.keys(REQ).forEach(function(aid){
+    if(isOff(aid) && REQ[aid].every(function(t){return connected[t];})) bootAgent(aid);});}
+  function bootAgent(aid){
+    var el=document.querySelector('[data-id="'+aid+'"]'); if(!el)return;
+    el.classList.remove('off'); el.classList.add('booting');
+    setTimeout(function(){el.classList.remove('booting');},1000);
+    push('','agent.online',NAME[aid]+' reporting for duty');
+    opGate();
+  }
+  /* the coordinated churn op only runs once the whole team is online */
+  function opGate(){ if(opStarted)return;
+    if(['analyst','scout','handler','medic','watch'].every(function(a){return !isOff(a);}))
+      setTimeout(startOp, reduce?0:1400);
+  }
+  function startOp(){
+    if(opStarted)return; opStarted=true;
+    [['08:06','turn.created','Handler opened OP-4471'],
+     ['08:06','thread.created','dispatched Scout → enrich ACME'],
+     ['08:07','sandbox.exec','Analyst ran usage_anomaly.py → −63% WoW'],
+     ['08:07','tool.response','Watch grafana.query → no active incident'],
+     ['08:07','tool.response','Medic zendesk.search → 2 open tickets'],
+     ['08:07','model.message','Handler drafted retention plan · 3 actions']
+    ].forEach(function(e){push(e[0],e[1],e[2]);});
+    push('08:07','approval_required','Handler ▸ gmail.send · zendesk.create · crm.update — AWAITING YOU', true);
+    var f=document.getElementById('flag-handler'); if(f)f.classList.add('on');
+    var b=document.getElementById('inboxBadge'); if(b)b.classList.add('on');
+  }
+
+  /* setup open/close */
+  var setupScrim=document.getElementById('setupScrim'), setupOpen=true;
+  function openSetup(){setupOpen=true;setupScrim.classList.add('on');}
+  function closeSetup(){setupOpen=false;setupScrim.classList.remove('on');}
+  document.getElementById('setupClose').addEventListener('click',closeSetup);
+  document.getElementById('enterFloor').addEventListener('click',closeSetup);
+  document.getElementById('mConnect').addEventListener('click',openSetup);
+  document.getElementById('connectAll').addEventListener('click',function(){
+    TOOLS.forEach(function(tl,i){setTimeout(function(){connect(tl.id);}, reduce?0:i*260);});
+  });
+  setupScrim.addEventListener('click',function(e){if(e.target===setupScrim)closeSetup();});
+
+  /* ---- desk / inbox windows ---- */
+  var scrim=document.getElementById('scrim'),win=document.getElementById('win'),
+      winTitle=document.getElementById('winTitle'),winBody=document.getElementById('winBody');
+  var winOpen=false, pending=true;
+  document.getElementById('winClose').addEventListener('click',closeWin);
+  scrim.addEventListener('click',function(e){if(e.target===scrim)closeWin();});
+  function closeWin(){winOpen=false;scrim.classList.remove('on');}
+
+  function interactWith(id){var d=deskById[id];if(!d)return;
+    if(d.kind==='agent'&&isOff(id)){ openSetup(); return; }
+    var isAgent=d.kind==='agent';
+    win.classList.toggle('chatwin',isAgent);
+    winTitle.textContent=d.kind==='door'?'LOCKED':(d.name||d.plate);
+    winBody.innerHTML=content(id); winOpen=true; scrim.classList.add('on');
+    if(id==='inbox'&&pending)wireAuth();
+    if(isAgent)wireChat(id);}
+
+  function content(id){
+    if(AG[id])return chatHTML(id);
+    if(id==='sales'||id==='pm')return '<h3 class="chi">Room offline</h3><p>'+(id==='sales'?'Sales':'Product')+' comes online in <b>v2</b>. The desk is wired — the agent isn\'t hired yet.</p><p class="muted">Defined in the roster · not deployed.</p>';
+    if(id==='inbox')return pending?authHTML():inboxEmpty();
+    return '';}
+
+  /* ---- agents you can talk to (each = a TrueForge session) ---- */
+  var AG={
+    analyst:{name:'Analyst',short:'ANALYST',role:'Data Analyst',rich:1,
+      intro:'Watching usage across every account. ACME just fell 63% WoW — I ran usage_anomaly.py in the sandbox and flagged Handler.',
+      chips:['What are you working on?','Refresh the weekly report','Which accounts are at risk?']},
+    handler:{name:'Handler',short:'HANDLER',role:'Account Manager',
+      intro:'Coordinating OP-4471 (ACME retention). Scout, Watch and Medic have reported in. I drafted a 3-step save — it’s in your Inbox for sign-off.',
+      chips:['What’s the status?','Prioritise enterprise accounts','Draft the ACME save']},
+    scout:{name:'Scout',short:'SCOUT',role:'Research',
+      intro:'Enriching new and at-risk accounts. Just wrote ACME’s profile to the CRM — champion is Ben (VP Eng).',
+      chips:['What did you find on ACME?','Research a new account','What’s next?']},
+    medic:{name:'Medic',short:'MEDIC',role:'Support',
+      intro:'Two tickets open: #4471 latency and #4468 timeout. I reproduced #4468 in the sandbox — looks like a retry bug.',
+      chips:['Summarise open tickets','Draft a reply to ACME','What’s urgent?']},
+    watch:{name:'Watch',short:'WATCH',role:'Incident',
+      intro:'All systems nominal. Last deploy 4c21 has been stable for 6h. I’ll page you the moment anything moves.',
+      chips:['Any incidents?','Check ACME’s services','What changed today?']}
+  };
+  var REPLIES={
+    analyst:[[/report|refresh|weekly/,'Refreshing the weekly BI report now — I’ll run the query in the sandbox and post the numbers. Want a churn-risk column added?'],
+      [/risk|churn|at.risk/,'Three accounts trending down: ACME (−63%), Northwind (−18%), Umbrella (−9%). ACME is the only critical one.'],
+      [/work|doing|status/,'Monitoring usage and keeping the BI reports fresh. Right now the ACME anomaly has my attention — everything else is nominal.']],
+    handler:[[/enterprise|priorit|focus/,'Understood — I’ll prioritise Growth-plan accounts and above from now on.'],
+      [/save|acme|retention|draft/,'The ACME save is drafted: email + ticket + CRM update. It needs your authorisation — it’s waiting in your Inbox.'],
+      [/status|doing|op/,'Coordinating OP-4471. The team has reported in and the 3-step save is in your Inbox for sign-off.']],
+    scout:[[/acme|find|found/,'ACME: Growth plan, 45 seats, renewal in 12 days. Champion is Ben (VP Eng); two support threads this month. It’s in the CRM.'],
+      [/research|new|profile/,'On it — I’ll dispatch subagents across the web and the CRM and bring back a sourced profile.']],
+    medic:[[/ticket|open|summ/,'#4471 latency p95 up (open 3d) and #4468 timeout on /charge (open 1d). I reproduced #4468 in the sandbox.'],
+      [/reply|draft|customer/,'I’ll draft a reply to ACME — it won’t send until you approve the wording.'],
+      [/urgent/,'#4471 is the one to watch — it’s tied to the ACME churn risk.']],
+    watch:[[/incident|down|alert/,'No active incidents. Error rate is nominal across all services.'],
+      [/acme|service/,'ACME’s services are green — the usage drop is behaviour, not an outage.'],
+      [/chang|deploy/,'One deploy today: 4c21, stable for 6h. Nothing else moved.']]
+  };
+  var DEFAULT={analyst:'On it — I’ll pull that and run it in the sandbox, then report back.',
+    handler:'Got it. I’ll coordinate the team and come back with a plan.',
+    scout:'Sure — I’ll research that and write what I find to the CRM.',
+    medic:'I’ll look into it and reply to the customer once you approve.',
+    watch:'I’ll keep an eye on it and page you if anything moves.'};
+
+  function bubble(kind,who,html){return '<div class="msg '+kind+'">'+(kind==='ag'?'<div class="who">'+who+'</div>':'')+'<div class="mtext">'+html+'</div></div>';}
+  function chatHTML(id){var a=AG[id];
+    var rich=a.rich?bubble('ag',a.short,'ACME — API calls / day<div class="chart" style="margin-top:6px">'+chartSVG()+'</div><div class="figrow" style="margin-top:5px"><span class="big">▼63% WoW</span> <span class="muted">ran in sandbox · 2.3s</span></div>'):'';
+    return '<div class="aghead"><div><span class="agname chi">'+a.name+'</span> <span class="muted">'+a.role+'</span></div><span class="tag8">ONLINE</span></div>'
+      +'<div class="chatlog" id="chatlog">'+bubble('ag',a.short,a.intro)+rich+'</div>'
+      +'<div class="chips" id="qchips">'+a.chips.map(function(c){return '<button class="qchip">'+c+'</button>';}).join('')+'</div>'
+      +'<div class="composer"><input class="cin" id="cin" placeholder="Ask '+a.short+' something…" autocomplete="off"><button class="btn send" id="csend">Send</button></div>';}
+  function scrollChat(){var l=document.getElementById('chatlog');if(l)l.scrollTop=l.scrollHeight;}
+  function esc(s){return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function reply(id,t){t=t.toLowerCase();var R=REPLIES[id]||[];for(var i=0;i<R.length;i++){if(R[i][0].test(t))return R[i][1];}return DEFAULT[id]||'On it.';}
+  function wireChat(id){var a=AG[id];
+    var send=function(text){text=(text||'').trim();if(!text)return;
+      var log=document.getElementById('chatlog');if(!log)return;
+      log.insertAdjacentHTML('beforeend',bubble('me','You',esc(text)));scrollChat();
+      var r=reply(id,text);
+      setTimeout(function(){log.insertAdjacentHTML('beforeend',bubble('ag',a.short,r));scrollChat();
+        if(id==='handler'&&/save|acme|retention|draft/i.test(text)&&pending){var b=document.getElementById('inboxBadge');if(b)b.classList.add('on');}
+      }, reduce?0:520);};
+    var input=document.getElementById('cin'), sbtn=document.getElementById('csend');
+    if(sbtn)sbtn.addEventListener('click',function(){send(input.value);input.value='';input.focus();});
+    if(input)input.addEventListener('keydown',function(e){if(e.key==='Enter'){send(input.value);input.value='';}});
+    document.querySelectorAll('#qchips .qchip').forEach(function(c){c.addEventListener('click',function(){send(c.textContent);});});
+    scrollChat();}
+  function chartSVG(){return '<svg viewBox="0 0 520 96" preserveAspectRatio="none">'
+    +'<line x1="0" y1="30" x2="520" y2="30" stroke="var(--dot)"/><line x1="0" y1="62" x2="520" y2="62" stroke="var(--dot)"/>'
+    +'<path d="M0 30 L40 26 L80 32 L120 24 L160 30 L200 27 L240 34 L280 31 L320 42 L360 60 L400 74 L440 82 L480 88 L520 90 L520 96 L0 96 Z" fill="var(--dot)"/>'
+    +'<path d="M0 30 L40 26 L80 32 L120 24 L160 30 L200 27 L240 34 L280 31 L320 42 L360 60 L400 74 L440 82 L480 88 L520 90" fill="none" stroke="var(--ink)" stroke-width="2"/>'
+    +'<rect x="516" y="86" width="8" height="8" fill="var(--ink)"/></svg>';}
+
+  function authHTML(){return '<div class="authhead"><h3 class="chi">Retain ACME Corp</h3><span class="goldlbl"><span class="bd"></span>AWAITING AUTH</span></div>'
+    +'<p class="muted">Proposed by <b>Handler</b>. Nothing has been sent.</p><div class="divide"></div>'
+    +act('1','Send retention email','ben@acme.co — “we saw the drop, here’s a hand”')
+    +act('2','Create Zendesk ticket','P2 · ACME latency + churn risk → Medic')
+    +act('3','Update CRM health','ACME → At-Risk · flag owner for QBR')
+    +'<div class="divide"></div><div class="gauge"><div class="meter"><i></i><b></b></div><div class="gv"><b>38</b> <span class="muted">/100 · At-Risk</span></div></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+chk('within outreach policy')+chk('verified account contact')+chk('no PII in payload')+chk('demo mailbox sink')+'</div>'
+    +'<div class="btnrow"><button class="btn go" id="authGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg>Authorise 3</button><button class="btn" id="authNo">Deny</button></div>'
+    +'<p class="muted" style="text-align:center;font-size:12px">The agent will not act until you authorise.</p>'
+    +'<div class="authed" id="authed"><div class="stamp">AUTHORISED</div><p class="muted">08:08:12 · Handler executing 3 actions. Email queued, ticket #4471-A created, CRM updated. Session logged.</p></div>';}
+  function act(n,a,b){return '<div class="act"><span class="n">'+n+'</span><div class="tx"><b>'+a+'</b><div class="muted">'+b+'</div></div><span class="irr">irreversible</span></div>';}
+  function chk(t){return '<span class="tag8"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg>'+t+'</span>';}
+  function inboxEmpty(){return '<h3 class="chi">In-tray empty</h3><p class="muted">No actions awaiting authorisation. The floor is green — walk it.</p>';}
+
+  function wireAuth(){var go=document.getElementById('authGo'),no=document.getElementById('authNo'),authed=document.getElementById('authed');
+    if(go)go.addEventListener('click',function(){pending=false;
+      var h=document.querySelector('#win .authhead');if(h)h.style.display='none';
+      document.querySelectorAll('#win .act, #win .gauge, #win .btnrow, #win .divide').forEach(function(x){x.style.display='none';});
+      document.querySelectorAll('#win .wbody > p').forEach(function(x){x.style.display='none';});
+      document.querySelectorAll('#win .wbody > div[style*="flex-wrap"]').forEach(function(x){x.style.display='none';});
+      authed.style.display='flex'; clearPending();});
+    if(no)no.addEventListener('click',function(){var s=document.querySelector('#win .goldlbl');if(s){s.textContent='DENIED';s.style.color='var(--ink)';s.style.borderColor='var(--ink)';}});}
+  function clearPending(){var f=document.getElementById('flag-handler');if(f)f.classList.remove('on');
+    var b=document.getElementById('inboxBadge');if(b)b.classList.remove('on');
+    push('08:08','authorised','You cleared 3 actions → Handler executing');
+    var hs=document.querySelector('[data-id="handler"] .stat');if(hs)hs.textContent='OP-4471 resolved';}
+
+  fit();
+})();
+</script>
