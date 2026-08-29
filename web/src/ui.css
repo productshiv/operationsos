@@ -1,0 +1,626 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+}
+
+/* ---------------- MENU BAR ---------------- */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 2px solid var(--ink);
+  flex: 0 0 auto;
+  z-index: 40;
+}
+.menubar .logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.menubar .logo .mk {
+  width: 16px;
+  height: 16px;
+  background: var(--ink);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.menubar .logo b {
+  font-size: 14px;
+}
+.menubar .m {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+.menubar .spread {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hstatus {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.hstatus--connecting {
+  color: var(--dot);
+}
+.hstatus--online {
+  color: var(--good);
+}
+.hstatus--offline {
+  color: var(--crit);
+}
+.clock {
+  font-family: 'Silkscreen', monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.iconbtn {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.iconbtn:active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.iconbtn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* ---------------- STAGE / WORLD ---------------- */
+.viewport {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: var(--paper);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+  background-size: 5px 5px;
+}
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 980px;
+  height: 580px;
+  transform-origin: top left;
+}
+.rug {
+  position: absolute;
+  left: 300px;
+  top: 210px;
+  width: 380px;
+  height: 190px;
+  border: 2px solid var(--ink);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+  background-size: 6px 6px;
+  opacity: 0.9;
+}
+.rug::after {
+  content: 'OPERATIONS · FLOOR 7';
+  position: absolute;
+  inset: auto 0 6px 0;
+  text-align: center;
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  opacity: 0.5;
+}
+
+/* ---------------- DESK ---------------- */
+.desk {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+.desk .scr {
+  position: relative;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 4px 4px 0 var(--sh);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.desk .tb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 17px;
+  padding: 0 4px;
+  border-bottom: 2px solid var(--ink);
+  background: repeating-linear-gradient(var(--ink) 0 1px, transparent 1px 3px);
+}
+.desk .tb .cb {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  flex: 0 0 auto;
+}
+.desk .tb .nm {
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  background: var(--panel);
+  padding: 0 3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.desk .disp {
+  flex: 1;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+  overflow: hidden;
+}
+.desk .stat {
+  font-size: 12.5px;
+  line-height: 1.2;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workbar {
+  height: 13px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  position: relative;
+  overflow: hidden;
+}
+.workbar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 34%;
+  background: var(--ink);
+  background-image: repeating-linear-gradient(90deg, var(--panel) 0 1px, transparent 1px 4px);
+  transform: translateX(-130%);
+  animation: sweep 1.5s linear infinite;
+}
+.cursorline {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.cursorline b {
+  display: inline-block;
+  width: 6px;
+  height: 11px;
+  background: var(--ink);
+  vertical-align: -2px;
+  animation: blink 1s steps(1) infinite;
+}
+.desk:not(.inbox) .asvg {
+  animation: atwork 0.8s steps(2) infinite;
+}
+.seat {
+  align-self: center;
+  margin-top: -2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.plate {
+  margin-top: 2px;
+  font-family: 'Silkscreen', monospace;
+  font-size: 8px;
+  letter-spacing: 0.07em;
+  border: 2px solid var(--ink);
+  padding: 1px 5px;
+  background: var(--panel);
+  text-transform: uppercase;
+}
+.flag {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 6;
+}
+.flag .pole {
+  width: 2px;
+  height: 16px;
+  background: var(--ink);
+}
+.flag .pn {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 22px;
+  height: 12px;
+  background: var(--gold);
+  border: 2px solid var(--ink);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 6px 50%);
+  display: grid;
+  place-items: center;
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  color: #15161a;
+}
+.flag .pn::after {
+  content: '!';
+}
+
+.door {
+  position: absolute;
+  border: 2px solid var(--ink);
+  background: var(--sink);
+  background-image: repeating-linear-gradient(45deg, var(--dot) 0 3px, transparent 3px 7px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--sh);
+}
+.door span {
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  padding: 2px 5px;
+  text-transform: uppercase;
+}
+
+.inbox .tray {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 4px 4px 0 var(--sh);
+  width: 100%;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  position: relative;
+}
+.inbox .slot {
+  width: 88%;
+  height: 8px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+}
+.inbox .lbl {
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+.inbox .badge {
+  position: absolute;
+  right: -8px;
+  top: -10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  background: var(--gold);
+  border: 2px solid var(--ink);
+  display: none;
+  place-items: center;
+  font-family: 'Silkscreen', monospace;
+  font-size: 12px;
+  color: #15161a;
+  z-index: 6;
+}
+
+/* ---------------- SPRITES ---------------- */
+.sprite {
+  position: absolute;
+  image-rendering: pixelated;
+}
+.sprite svg {
+  display: block;
+  shape-rendering: crispedges;
+}
+.ceo {
+  width: 26px;
+  height: 34px;
+  z-index: 8;
+}
+.ceo svg {
+  transform-origin: center center;
+}
+.ceo .tag {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  font-family: 'Silkscreen', monospace;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 0 3px;
+}
+.shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+.legB {
+  display: none;
+}
+.ceo.walk .legA {
+  display: none;
+}
+.ceo.walk .legB {
+  display: block;
+}
+
+.prompt {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+}
+.prompt .k {
+  border: 2px solid var(--paper);
+  padding: 0 3px;
+}
+
+/* ---------------- DESK WINDOW ---------------- */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+}
+.scrim.on {
+  display: block;
+}
+.win {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 92vw);
+  max-height: 82%;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow: 7px 7px 0 var(--sh);
+  display: flex;
+  flex-direction: column;
+}
+.win .wtb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 7px;
+  border-bottom: 2px solid var(--ink);
+  background: repeating-linear-gradient(var(--ink) 0 1px, transparent 1px 3px);
+  flex: 0 0 auto;
+}
+.win .cb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+  padding: 0;
+}
+.win .cb:active {
+  background: var(--ink);
+}
+.win .wt {
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  background: var(--panel);
+  padding: 0 5px;
+  text-transform: uppercase;
+}
+.wbody {
+  padding: 16px;
+  overflow: auto;
+}
+.wbody p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.wbody b {
+  font-weight: 700;
+}
+
+/* ---------------- TOUCH ---------------- */
+.touch {
+  position: absolute;
+  inset: auto 0 36px 0;
+  z-index: 45;
+  display: none;
+  justify-content: space-between;
+  padding: 0 14px;
+  pointer-events: none;
+}
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(3, 42px);
+  gap: 4px;
+  pointer-events: auto;
+}
+.dpad button {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  opacity: 0.92;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 14px;
+}
+.dpad button:active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.dpad .u { grid-area: 1 / 2; }
+.dpad .l { grid-area: 2 / 1; }
+.dpad .r { grid-area: 2 / 3; }
+.dpad .d { grid-area: 3 / 2; }
+.abtn {
+  align-self: flex-end;
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: 'Silkscreen', monospace;
+  font-size: 17px;
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--sh);
+}
+.abtn:active {
+  background: var(--ink);
+  color: var(--paper);
+}
+@media (pointer: coarse), (max-width: 760px) {
+  .touch {
+    display: flex;
+  }
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 44;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  padding: 6px 11px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+}
+.hint .k {
+  border: 2px solid var(--paper);
+  padding: 0 3px;
+  margin: 0 1px;
+}
+
+/* ---------------- TICKER ---------------- */
+.ticker {
+  flex: 0 0 auto;
+  height: 30px;
+  border-top: 2px solid var(--ink);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  z-index: 40;
+}
+.ticker .lead {
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  background: var(--ink);
+  color: var(--panel);
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+.twrap {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.tmove {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scrollx 60s linear infinite;
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.tmove .e {
+  opacity: 0.6;
+  margin: 0 22px;
+}
+.tmove .e b {
+  opacity: 1;
+}
+.tmove .e.gold {
+  color: var(--gold-ink);
+  opacity: 1;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes sweep {
+  to {
+    transform: translateX(360%);
+  }
+}
+@keyframes atwork {
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+@keyframes scrollx {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
+  /* Without the marquee, drop the leading offset so events aren't parked off-screen. */
+  .tmove {
+    padding-left: 0;
+  }
+  .twrap {
+    overflow-x: auto;
+  }
+}

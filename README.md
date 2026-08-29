@@ -62,8 +62,16 @@ and technical decisions were made and are owned by the author, who can explain t
 Every substantive change ships through a GitHub pull request reviewed by
 [Qodo](https://www.qodo.ai/) before merge; direct pushes to `main` are avoided.
 
-> _To be populated with links to representative merged PRs, a note on what Qodo surfaced and how
-> it was resolved or intentionally dismissed, and the follow-up review against the final code._
+**Reviewed PRs**
+
+- **[#1 — Scaffold React + Vite + TS front-end wired to the TrueForge SDK](https://github.com/productshiv/operationsos/pull/1)** —
+  Qodo reviewed the scaffold and raised no findings, endorsing the architecture: the singleton SDK
+  adapter keeps harness configuration and probing out of the UI, and the one-shot status check
+  validates integration _"without prematurely adding global state or polling."_ No changes were
+  required.
+
+_This list grows as each PR merges — with what Qodo surfaced and how it was resolved or, with
+reasoning, dismissed._
 
 ## License
 

@@ -24,3 +24,7 @@ npm-debug.log*
 
 # local preview / scratch
 .preview-mock.html
+
+# tooling state (not project source)
+.impeccable/
+.claude/settings.local.json
