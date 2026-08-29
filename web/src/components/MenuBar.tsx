@@ -19,8 +19,8 @@ function toggleTheme() {
   root.setAttribute('data-theme', next);
 }
 
-/** The OS menu bar: brand, live clock, harness connection status, day/night toggle. */
-export function MenuBar({ conn }: { conn: ConnectionState }) {
+/** The OS menu bar: brand, connect-tools, live clock, harness connection status, day/night toggle. */
+export function MenuBar({ conn, onConnect }: { conn: ConnectionState; onConnect?: () => void }) {
   const clock = useClock();
   return (
     <header className="menubar">
@@ -28,6 +28,7 @@ export function MenuBar({ conn }: { conn: ConnectionState }) {
         <span className="mk" />
         <b className="chi">OperationsOS</b>
       </div>
+      <button className="m m-btn" onClick={onConnect}>Connect</button>
       <span className="m">File&nbsp;TF-007</span>
       <span className="m">View</span>
       <div className="spread">

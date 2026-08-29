@@ -464,6 +464,123 @@
   font-weight: 700;
 }
 
+/* ---------------- SETUP / CONNECTORS ---------------- */
+.menubar .m-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+.menubar .m-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.win.setup {
+  width: min(560px, 94vw);
+}
+.setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.setup-head {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.setup-title {
+  font-size: 15px;
+}
+.dim {
+  opacity: 0.7;
+}
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  background: var(--sink);
+  padding: 1px 5px;
+}
+.setup-note {
+  border: 2px solid var(--ink);
+  background: var(--sink);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+.setup-note p {
+  margin: 0;
+}
+.prog {
+  font-size: 11px;
+}
+.conns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 44vh;
+  overflow: auto;
+}
+.conn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 9px 11px;
+}
+.conn-id {
+  min-width: 0;
+  flex: 1;
+}
+.conn-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.conn-url {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conn-ok {
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--good);
+  white-space: nowrap;
+}
+.conn-ok.dim {
+  color: inherit;
+}
+.setup-foot {
+  display: flex;
+  gap: 9px;
+}
+.btn {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 9px 13px;
+  cursor: pointer;
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--sh);
+}
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 /* ---------------- TOUCH ---------------- */
 .touch {
   position: absolute;
