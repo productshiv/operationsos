@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { useModels } from '../state/useModels';
-import { TRUEFORGE_BASE_URL } from '../lib/trueforge';
 import { AGENT_MODEL } from '../lib/agents';
-import type { Connector, ConnectorAuthKind } from '../lib/connectors';
+import type { CatalogConnector, Connector, ConnectorAuthKind } from '../lib/connectors';
 import type { ModelRef } from '../lib/models';
 
 /**
@@ -46,16 +45,12 @@ export function Setup({
         <div className="wbody setup-body">
           <div className="setup-head">
             <span className="chi setup-title">Set up your platform.</span>
-            <p className="dim">
-              An agent needs a <b>model</b> to think with and <b>connectors</b> to act through. Wire
-              both here — no TrueForge admin UI required.
-            </p>
           </div>
 
           {harnessDown ? (
             <div className="setup-note">
-              <p><b>Harness not reachable</b> at {TRUEFORGE_BASE_URL}.</p>
-              <p className="dim">Start it with <code>npx @truefoundry/trueforge@latest</code>, then refresh.</p>
+              <p><b>Harness not reachable.</b></p>
+              <p className="dim">Start it, then refresh.</p>
             </div>
           ) : (
             <>
@@ -91,22 +86,16 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
         )}
       </div>
 
-      {models.loading && <p className="dim">Loading models…</p>}
+      {models.loading && <p className="dim">Loading…</p>}
 
       {!models.loading && models.offline && (
-        <div className="setup-note">
-          <p><b>Couldn’t reach model settings.</b></p>
-          <p className="dim">The harness is up but its model endpoint didn’t respond — refresh to retry.</p>
-        </div>
+        <p className="dim">Couldn’t reach model settings — refresh.</p>
       )}
 
       {!models.loading && !models.offline && (
         <>
           {models.models.length === 0 && !adding && (
-            <div className="setup-note">
-              <p><b>No model configured.</b> Agents can’t think until one is.</p>
-              <p className="dim">Add an OpenAI-compatible provider (OpenRouter, Together, …).</p>
-            </div>
+            <p className="dim">No model yet — agents can’t run.</p>
           )}
 
           {models.models.length > 0 && (
@@ -119,9 +108,7 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
 
           {/* Some model exists, but not the one the agents call — say so plainly. */}
           {models.models.length > 0 && !hasAgentModel && !adding && (
-            <p className="dim intg-form-note">
-              Agents run on <code>{AGENT_MODEL}</code> — add that exact provider/model to go live.
-            </p>
+            <p className="dim intg-form-note">Agents need <code>{AGENT_MODEL}</code>.</p>
           )}
         </>
       )}
@@ -173,26 +160,26 @@ function ProviderForm({
 
   return (
     <div className="intg-form">
-      <Field label="Provider name" hint="the “provider” half of provider/model">
+      <Field label="Provider">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="openrouter" />
       </Field>
-      <Field label="Base URL" hint="OpenAI-compatible endpoint">
+      <Field label="Base URL">
         <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://openrouter.ai/api/v1" />
       </Field>
-      <Field label="API key" hint="stored on the harness, redacted on read-back">
+      <Field label="API key">
         <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-or-…" />
       </Field>
       <div className="form-row">
-        <Field label="Model name" hint="local alias">
+        <Field label="Model name">
           <input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="minimax-m3" />
         </Field>
-        <Field label="Model ID" hint="upstream id">
+        <Field label="Model ID">
           <input value={modelId} onChange={(e) => setModelId(e.target.value)} placeholder="minimax/minimax-m1" />
         </Field>
       </div>
 
       {models.saveState === 'error' && (
-        <div className="conn-err">Couldn’t add the provider — check the key and base URL, then retry.</div>
+        <div className="conn-err">Couldn’t add — check the key and URL.</div>
       )}
 
       <div className="form-actions">
@@ -208,9 +195,11 @@ function ProviderForm({
 /* ----------------------------- CONNECTORS ----------------------------- */
 
 function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useConnectors> }) {
-  const [adding, setAdding] = useState(false);
-  const { connectors: list, connectState, connect } = connectors;
+  const [custom, setCustom] = useState(false);
+  const { connectors: list, connectState, connect, catalog, catalogState, addFromCatalog } = connectors;
   const authed = list.filter((c) => c.status !== 'auth_required').length;
+  const configured = new Set(list.map((c) => c.name));
+  const available = catalog.filter((c) => !configured.has(c.name));
 
   return (
     <section className="intg-sec">
@@ -218,29 +207,19 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
         <span className="chi intg-sec-title">
           Connectors{list.length > 0 ? ` · ${authed}/${list.length}` : ''}
         </span>
-        {!adding && (
-          <button className="link-btn" onClick={() => setAdding(true)}>＋ Add connector</button>
+        {!custom && (
+          <button className="link-btn" onClick={() => setCustom(true)}>＋ Custom</button>
         )}
       </div>
 
-      {connectors.loading && <p className="dim">Loading connectors…</p>}
+      {connectors.loading && <p className="dim">Loading…</p>}
 
       {!connectors.loading && connectors.offline && (
-        <div className="setup-note">
-          <p><b>Couldn’t reach connector settings.</b></p>
-          <p className="dim">The harness is up but its connector endpoint didn’t respond — refresh to retry.</p>
-        </div>
+        <p className="dim">Couldn’t reach connector settings — refresh.</p>
       )}
 
       {!connectors.loading && !connectors.offline && (
         <>
-          {list.length === 0 && !adding && (
-            <div className="setup-note">
-              <p><b>No connectors yet.</b> Agents can talk, but not act.</p>
-              <p className="dim">Add a remote MCP server (Supabase, Jira, Exa, …).</p>
-            </div>
-          )}
-
           {list.length > 0 && (
             <div className="intg-list">
               {list.map((c) => (
@@ -253,12 +232,116 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
               ))}
             </div>
           )}
+
+          {available.length > 0 && (
+            <div className="cat-grid">
+              {available.map((entry) => (
+                <CatalogTile
+                  key={entry.name}
+                  entry={entry}
+                  state={catalogState[entry.name] ?? 'idle'}
+                  onAdd={(headers) => void addFromCatalog(entry, headers)}
+                />
+              ))}
+            </div>
+          )}
+
+          {list.length === 0 && available.length === 0 && !custom && (
+            <p className="dim">No connectors — add a custom one.</p>
+          )}
         </>
       )}
 
-      {adding && <ConnectorForm connectors={connectors} onDone={() => setAdding(false)} />}
+      {custom && <ConnectorForm connectors={connectors} onDone={() => setCustom(false)} />}
     </section>
   );
+}
+
+/**
+ * A one-click tile from the connector catalog. `none`/`dcr` add on click; `header` tools reveal a
+ * field per required header first (values resolved from the catalog templates). Add failures show a
+ * retryable error on the tile.
+ */
+function CatalogTile({
+  entry,
+  state,
+  onAdd,
+}: {
+  entry: CatalogConnector;
+  state: 'idle' | 'saving' | 'error';
+  onAdd: (headers?: Record<string, string>) => void;
+}) {
+  const headerNames = Object.keys(entry.headerTemplate ?? {});
+  const hasHeaders = headerNames.length > 0;
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const saving = state === 'saving';
+  const badge = entry.authType === 'dcr' ? 'oauth' : entry.authType === 'header' ? 'key' : '';
+
+  const allFilled = headerNames.every((h) => (vals[h] ?? '').trim());
+  const submit = () => {
+    // Resolve every required header to what the user typed; never keep the template placeholder.
+    const headers: Record<string, string> = {};
+    for (const h of headerNames) headers[h] = (vals[h] ?? '').trim();
+    onAdd(headers);
+  };
+  const startAdd = () => (hasHeaders ? setKeyOpen(true) : onAdd());
+
+  if (keyOpen) {
+    return (
+      <div className="cat-tile cat-tile--key">
+        <div className="cat-id"><ConnectorLogo entry={entry} /><span className="cat-name">{entry.name}</span></div>
+        {headerNames.map((h, i) => (
+          <input
+            key={h}
+            type="password"
+            value={vals[h] ?? ''}
+            onChange={(e) => setVals((v) => ({ ...v, [h]: e.target.value }))}
+            // The catalog template (e.g. "Bearer YOUR_GITHUB_PAT") shows the format as a placeholder;
+            // masked prefill would just hide it behind password dots.
+            placeholder={entry.headerTemplate?.[h] ?? h}
+            autoFocus={i === 0}
+          />
+        ))}
+        {state === 'error' && <div className="conn-err">Couldn’t add — check the key.</div>}
+        <div className="cat-key-actions">
+          <button className="link-btn" onClick={() => setKeyOpen(false)}>Cancel</button>
+          <button className="link-btn" onClick={submit} disabled={!allFilled || saving}>
+            {saving ? '…' : 'Add'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="cat-tile cat-tile--error">
+        <ConnectorLogo entry={entry} />
+        <span className="cat-name">{entry.name}</span>
+        <span className="conn-err">couldn’t add</span>
+        <button className="link-btn" onClick={startAdd}>Retry</button>
+      </div>
+    );
+  }
+
+  return (
+    <button className="cat-tile" disabled={saving} title={entry.description} onClick={startAdd}>
+      <ConnectorLogo entry={entry} />
+      <span className="cat-name">{entry.name}</span>
+      {badge && <span className="cat-badge">{badge}</span>}
+      <span className="cat-plus">{saving ? '…' : '＋'}</span>
+    </button>
+  );
+}
+
+/** Catalog logo with a graceful first-letter fallback if the asset fails to load. */
+function ConnectorLogo({ entry }: { entry: CatalogConnector }) {
+  const [broken, setBroken] = useState(false);
+  if (!entry.logo || broken) {
+    return <span className="cat-logo cat-logo--fallback">{entry.name[0]?.toUpperCase()}</span>;
+  }
+  return <img className="cat-logo" src={entry.logo} alt="" onError={() => setBroken(true)} />;
 }
 
 function ConnectorRow({
@@ -325,13 +408,13 @@ function ConnectorForm({
 
   return (
     <div className="intg-form">
-      <Field label="Name" hint="how agents reference this tool">
+      <Field label="Name">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="supabase" />
       </Field>
-      <Field label="Server URL" hint="remote MCP endpoint">
+      <Field label="Server URL">
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/sse" />
       </Field>
-      <Field label="Auth" hint="how it authenticates">
+      <Field label="Auth">
         <select value={authKind} onChange={(e) => setAuthKind(e.target.value as ConnectorAuthKind)}>
           <option value="none">None</option>
           <option value="header">API key (header)</option>
@@ -341,21 +424,21 @@ function ConnectorForm({
 
       {authKind === 'header' && (
         <div className="form-row">
-          <Field label="Header" hint="e.g. Authorization">
+          <Field label="Header">
             <input value={headerName} onChange={(e) => setHeaderName(e.target.value)} placeholder="Authorization" />
           </Field>
-          <Field label="Value" hint="secret, stored on the harness">
+          <Field label="Value">
             <input type="password" value={headerValue} onChange={(e) => setHeaderValue(e.target.value)} placeholder="Bearer …" />
           </Field>
         </div>
       )}
 
       {authKind === 'oauth' && (
-        <p className="dim intg-form-note">Saved as an OAuth connector — hit <b>Connect</b> on it to authorise.</p>
+        <p className="dim intg-form-note">Added as OAuth — hit <b>Connect</b> to authorise.</p>
       )}
 
       {connectors.addState === 'error' && (
-        <div className="conn-err">Couldn’t add the connector — check the URL and auth, then retry.</div>
+        <div className="conn-err">Couldn’t add — check the URL and auth.</div>
       )}
 
       <div className="form-actions">
@@ -370,12 +453,11 @@ function ConnectorForm({
 
 /* ------------------------------- shared ------------------------------- */
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
       {children}
-      {hint && <span className="field-hint dim">{hint}</span>}
     </label>
   );
 }

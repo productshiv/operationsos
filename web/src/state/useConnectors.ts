@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  addCatalogConnector,
   authorizeConnector,
   createConnector,
+  listCatalog,
   listConnectors,
+  type CatalogConnector,
   type Connector,
   type CreateConnectorInput,
 } from '../lib/connectors';
@@ -33,6 +36,10 @@ export function useConnectors() {
   const [state, setState] = useState<ConnectorsState>({ loading: true, offline: false, connectors: [] });
   const [connectState, setConnectState] = useState<Record<string, ConnectState>>({});
   const [addState, setAddState] = useState<AddState>('idle');
+  const [catalog, setCatalog] = useState<CatalogConnector[]>([]);
+  // Per-catalog-connector add state, keyed by name so overlapping adds don't clobber one another
+  // and each tile can show its own spinner / retryable error.
+  const [catalogState, setCatalogState] = useState<Record<string, 'saving' | 'error'>>({});
 
   const refresh = useCallback(async () => {
     try {
@@ -43,9 +50,18 @@ export function useConnectors() {
     }
   }, []);
 
+  const loadCatalog = useCallback(async () => {
+    try {
+      setCatalog(await listCatalog());
+    } catch {
+      setCatalog([]); // catalog is a nicety; its failure must not break manual add
+    }
+  }, []);
+
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void loadCatalog();
+  }, [refresh, loadCatalog]);
 
   // The user authorises in another tab; refresh when they come back so a completed connect shows.
   useEffect(() => {
@@ -93,5 +109,36 @@ export function useConnectors() {
     [refresh],
   );
 
-  return { ...state, connectState, addState, refresh, connect, add };
+  const addFromCatalog = useCallback(
+    async (entry: CatalogConnector, headers?: Record<string, string>): Promise<boolean> => {
+      // Functional updates so simultaneous adds only touch their own key.
+      setCatalogState((s) => ({ ...s, [entry.name]: 'saving' }));
+      try {
+        await addCatalogConnector(entry, headers);
+        await refresh();
+        setCatalogState((s) => {
+          const next = { ...s };
+          delete next[entry.name];
+          return next;
+        });
+        return true;
+      } catch {
+        setCatalogState((s) => ({ ...s, [entry.name]: 'error' }));
+        return false;
+      }
+    },
+    [refresh],
+  );
+
+  return {
+    ...state,
+    connectState,
+    addState,
+    catalog,
+    catalogState,
+    refresh,
+    connect,
+    add,
+    addFromCatalog,
+  };
 }
