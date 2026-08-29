@@ -64,14 +64,18 @@ Every substantive change ships through a GitHub pull request reviewed by
 
 **Reviewed PRs**
 
-- **[#1 — Scaffold React + Vite + TS front-end wired to the TrueForge SDK](https://github.com/productshiv/operationsos/pull/1)** —
-  Qodo reviewed the scaffold and raised no findings, endorsing the architecture: the singleton SDK
-  adapter keeps harness configuration and probing out of the UI, and the one-shot status check
-  validates integration _"without prematurely adding global state or polling."_ No changes were
-  required.
+- **[#1 — Scaffold React + Vite + TS front-end](https://github.com/productshiv/operationsos/pull/1)** —
+  Qodo raised **2 Medium findings**: the harness status was probed only once (would go stale), and
+  the health probe inherited the client's 600s streaming timeout. Both were valid and fixed in #2 —
+  a polling `useHarnessStatus` hook and a dedicated 5s-timeout probe client — and answered on their
+  threads.
+- **[#2 — Walkable 1-bit office (world slice)](https://github.com/productshiv/operationsos/pull/2)** —
+  Qodo raised **5 findings** (inert interactions, the reduced-motion ticker parked off-screen, the
+  facing transform mirroring the "YOU" label, movement keys latching after focus loss, and a UTC
+  clock). All five were fixed, each thread answered, and Qodo's **follow-up review returned 0
+  findings**.
 
-_This list grows as each PR merges — with what Qodo surfaced and how it was resolved or, with
-reasoning, dismissed._
+_Updated as each PR merges — what Qodo surfaced, and how it was resolved or, with reasoning, dismissed._
 
 ## License
 

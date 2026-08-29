@@ -1,0 +1,71 @@
+import { useCallback, useEffect, useState } from 'react';
+import { authorizeConnector, listConnectors, type Connector } from '../lib/connectors';
+
+export interface ConnectorsState {
+  loading: boolean;
+  /** True when the harness could not be reached at all. */
+  offline: boolean;
+  connectors: Connector[];
+}
+
+/** Per-connector state while the CEO is authorising it. */
+export type ConnectState = 'idle' | 'authorizing' | 'error';
+
+/**
+ * Loads the harness's MCP connectors and runs a real authorize flow.
+ *
+ * The OAuth tab must be opened by the click itself (a tab opened after an await is killed by popup
+ * blockers), so the caller opens a blank tab synchronously and hands it in; we point it at the
+ * authorization URL once the harness returns one. Because `authorize` only yields that URL — it
+ * does not wait for the user to finish — we re-list when the user returns to the app (window focus)
+ * rather than immediately, and surface per-connector errors instead of dropping them.
+ */
+export function useConnectors() {
+  const [state, setState] = useState<ConnectorsState>({ loading: true, offline: false, connectors: [] });
+  const [connectState, setConnectState] = useState<Record<string, ConnectState>>({});
+
+  const refresh = useCallback(async () => {
+    try {
+      const connectors = await listConnectors();
+      setState({ loading: false, offline: false, connectors });
+    } catch {
+      setState({ loading: false, offline: true, connectors: [] });
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  // The user authorises in another tab; refresh when they come back so a completed connect shows.
+  useEffect(() => {
+    const onFocus = () => void refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refresh]);
+
+  const connect = useCallback(
+    async (name: string, popup: Window | null) => {
+      setConnectState((s) => ({ ...s, [name]: 'authorizing' }));
+      try {
+        const { authorizationUrl } = await authorizeConnector(name);
+        if (authorizationUrl) {
+          if (popup) popup.location.href = authorizationUrl;
+          else window.open(authorizationUrl, '_blank'); // fallback if the pre-opened tab was blocked
+          setConnectState((s) => ({ ...s, [name]: 'idle' }));
+        } else {
+          // No auth needed — nothing to open.
+          popup?.close();
+          setConnectState((s) => ({ ...s, [name]: 'idle' }));
+        }
+        await refresh();
+      } catch {
+        popup?.close();
+        setConnectState((s) => ({ ...s, [name]: 'error' }));
+      }
+    },
+    [refresh],
+  );
+
+  return { ...state, connectState, refresh, connect };
+}
