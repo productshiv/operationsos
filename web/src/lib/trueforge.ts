@@ -5,13 +5,14 @@ export const TRUEFORGE_BASE_URL =
   import.meta.env.VITE_TRUEFORGE_BASE_URL ?? 'http://localhost:8790';
 
 /**
- * URL the SDK actually calls. In dev the browser can't reach the harness directly (CORS), so we
- * route through Vite's same-origin `/tf` proxy (see vite.config.ts). An explicit
- * VITE_TRUEFORGE_BASE_URL (e.g. a harness that already allows this origin) is used as-is.
+ * URL the SDK actually calls. The browser can't reach the harness cross-origin (CORS), so by
+ * default we route through a same-origin `/tf` proxy — Vite's dev proxy locally (vite.config.ts),
+ * nginx in production (web/nginx.conf). An explicit VITE_TRUEFORGE_BASE_URL (a harness that already
+ * allows this origin) is used as-is.
  */
 const CLIENT_BASE_URL =
   import.meta.env.VITE_TRUEFORGE_BASE_URL ??
-  (import.meta.env.DEV && typeof window !== 'undefined'
+  (typeof window !== 'undefined'
     ? new URL('/tf', window.location.origin).toString()
     : 'http://localhost:8790');
 
