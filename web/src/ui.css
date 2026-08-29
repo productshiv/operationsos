@@ -798,6 +798,20 @@ code {
   justify-content: flex-end;
   gap: 12px;
 }
+.cat-tile--error {
+  grid-column: 1 / -1;
+  cursor: default;
+}
+.cat-tile--error .cat-name {
+  flex: 0 1 auto;
+}
+.cat-tile--error .conn-err {
+  flex: 1;
+  margin: 0;
+}
+.cat-tile--error .link-btn {
+  flex: 0 0 auto;
+}
 
 /* ---------------- AGENT CHAT ---------------- */
 .win.chatwin {

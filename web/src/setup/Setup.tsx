@@ -196,7 +196,7 @@ function ProviderForm({
 
 function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useConnectors> }) {
   const [custom, setCustom] = useState(false);
-  const { connectors: list, connectState, connect, catalog, addingName, addFromCatalog } = connectors;
+  const { connectors: list, connectState, connect, catalog, catalogState, addFromCatalog } = connectors;
   const authed = list.filter((c) => c.status !== 'auth_required').length;
   const configured = new Set(list.map((c) => c.name));
   const available = catalog.filter((c) => !configured.has(c.name));
@@ -239,7 +239,7 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
                 <CatalogTile
                   key={entry.name}
                   entry={entry}
-                  adding={addingName === entry.name}
+                  state={catalogState[entry.name] ?? 'idle'}
                   onAdd={(headers) => void addFromCatalog(entry, headers)}
                 />
               ))}
@@ -257,56 +257,80 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
   );
 }
 
-/** A one-click tile from the connector catalog. Header-auth tools reveal a key field first. */
+/**
+ * A one-click tile from the connector catalog. `none`/`dcr` add on click; `header` tools reveal a
+ * field per required header first (values resolved from the catalog templates). Add failures show a
+ * retryable error on the tile.
+ */
 function CatalogTile({
   entry,
-  adding,
+  state,
   onAdd,
 }: {
   entry: CatalogConnector;
-  adding: boolean;
+  state: 'idle' | 'saving' | 'error';
   onAdd: (headers?: Record<string, string>) => void;
 }) {
+  const headerNames = Object.keys(entry.headerTemplate ?? {});
+  const hasHeaders = headerNames.length > 0;
   const [keyOpen, setKeyOpen] = useState(false);
-  const headerName = Object.keys(entry.headerTemplate ?? {})[0] ?? 'Authorization';
-  const [val, setVal] = useState('');
-  // The catalog's template (e.g. "Bearer YOUR_GITHUB_PAT") shows the expected format as a
-  // placeholder — masked prefill would just hide it behind password dots.
-  const keyPlaceholder = entry.headerTemplate?.[headerName] ?? headerName;
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const saving = state === 'saving';
   const badge = entry.authType === 'dcr' ? 'oauth' : entry.authType === 'header' ? 'key' : '';
+
+  const allFilled = headerNames.every((h) => (vals[h] ?? '').trim());
+  const submit = () => {
+    // Resolve every required header to what the user typed; never keep the template placeholder.
+    const headers: Record<string, string> = {};
+    for (const h of headerNames) headers[h] = (vals[h] ?? '').trim();
+    onAdd(headers);
+  };
+  const startAdd = () => (hasHeaders ? setKeyOpen(true) : onAdd());
 
   if (keyOpen) {
     return (
       <div className="cat-tile cat-tile--key">
         <div className="cat-id"><ConnectorLogo entry={entry} /><span className="cat-name">{entry.name}</span></div>
-        <input
-          type="password"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          placeholder={keyPlaceholder}
-          autoFocus
-        />
+        {headerNames.map((h, i) => (
+          <input
+            key={h}
+            type="password"
+            value={vals[h] ?? ''}
+            onChange={(e) => setVals((v) => ({ ...v, [h]: e.target.value }))}
+            // The catalog template (e.g. "Bearer YOUR_GITHUB_PAT") shows the format as a placeholder;
+            // masked prefill would just hide it behind password dots.
+            placeholder={entry.headerTemplate?.[h] ?? h}
+            autoFocus={i === 0}
+          />
+        ))}
+        {state === 'error' && <div className="conn-err">Couldn’t add — check the key.</div>}
         <div className="cat-key-actions">
           <button className="link-btn" onClick={() => setKeyOpen(false)}>Cancel</button>
-          <button className="link-btn" onClick={() => onAdd({ [headerName]: val.trim() })} disabled={!val.trim() || adding}>
-            {adding ? '…' : 'Add'}
+          <button className="link-btn" onClick={submit} disabled={!allFilled || saving}>
+            {saving ? '…' : 'Add'}
           </button>
         </div>
       </div>
     );
   }
 
+  if (state === 'error') {
+    return (
+      <div className="cat-tile cat-tile--error">
+        <ConnectorLogo entry={entry} />
+        <span className="cat-name">{entry.name}</span>
+        <span className="conn-err">couldn’t add</span>
+        <button className="link-btn" onClick={startAdd}>Retry</button>
+      </div>
+    );
+  }
+
   return (
-    <button
-      className="cat-tile"
-      disabled={adding}
-      title={entry.description}
-      onClick={() => (entry.authType === 'header' ? setKeyOpen(true) : onAdd())}
-    >
+    <button className="cat-tile" disabled={saving} title={entry.description} onClick={startAdd}>
       <ConnectorLogo entry={entry} />
       <span className="cat-name">{entry.name}</span>
       {badge && <span className="cat-badge">{badge}</span>}
-      <span className="cat-plus">{adding ? '…' : '＋'}</span>
+      <span className="cat-plus">{saving ? '…' : '＋'}</span>
     </button>
   );
 }

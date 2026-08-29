@@ -37,8 +37,9 @@ export function useConnectors() {
   const [connectState, setConnectState] = useState<Record<string, ConnectState>>({});
   const [addState, setAddState] = useState<AddState>('idle');
   const [catalog, setCatalog] = useState<CatalogConnector[]>([]);
-  // Name of the catalog connector currently being added (for its tile's spinner), or null.
-  const [addingName, setAddingName] = useState<string | null>(null);
+  // Per-catalog-connector add state, keyed by name so overlapping adds don't clobber one another
+  // and each tile can show its own spinner / retryable error.
+  const [catalogState, setCatalogState] = useState<Record<string, 'saving' | 'error'>>({});
 
   const refresh = useCallback(async () => {
     try {
@@ -110,15 +111,20 @@ export function useConnectors() {
 
   const addFromCatalog = useCallback(
     async (entry: CatalogConnector, headers?: Record<string, string>): Promise<boolean> => {
-      setAddingName(entry.name);
+      // Functional updates so simultaneous adds only touch their own key.
+      setCatalogState((s) => ({ ...s, [entry.name]: 'saving' }));
       try {
         await addCatalogConnector(entry, headers);
         await refresh();
+        setCatalogState((s) => {
+          const next = { ...s };
+          delete next[entry.name];
+          return next;
+        });
         return true;
       } catch {
+        setCatalogState((s) => ({ ...s, [entry.name]: 'error' }));
         return false;
-      } finally {
-        setAddingName(null);
       }
     },
     [refresh],
@@ -129,7 +135,7 @@ export function useConnectors() {
     connectState,
     addState,
     catalog,
-    addingName,
+    catalogState,
     refresh,
     connect,
     add,
