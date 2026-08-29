@@ -12,17 +12,21 @@ name: operationsos
 services:
   postgres:
     image: postgres:17
+    # Internal DB only (never exposed to the host), so the credentials are fixed here.
+    # Relying on env for POSTGRES_PASSWORD is fragile — a blank value makes postgres:17
+    # refuse to start, which is the usual "postgres unhealthy" cause on Coolify.
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-trueforge}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trueforge}
-      POSTGRES_DB: ${POSTGRES_DB:-trueforge}
+      POSTGRES_USER: trueforge
+      POSTGRES_PASSWORD: trueforge
+      POSTGRES_DB: trueforge
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: ['CMD-SHELL', 'pg_isready -U trueforge -d trueforge']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 30s
     restart: unless-stopped
 
   redis:
@@ -44,9 +48,9 @@ services:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080/tf}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:-trueforge}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trueforge}
-      POSTGRES_DB: ${POSTGRES_DB:-trueforge}
+      POSTGRES_USER: trueforge
+      POSTGRES_PASSWORD: trueforge
+      POSTGRES_DB: trueforge
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:

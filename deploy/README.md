@@ -11,8 +11,8 @@ Only the `web` service is exposed; the harness is reachable solely through `/tf`
 1. New resource → **Docker Compose**, from this repo.
 2. **Compose file path:** `deploy/docker-compose.yml`.
 3. Set environment variables (see [`.env.example`](.env.example)):
-   - `POSTGRES_PASSWORD` — a real password
    - `PUBLIC_BASE_URL` — your Coolify domain **+ `/tf`**, e.g. `https://ops.example.com/tf`
+   - (Postgres credentials are internal to the compose — nothing to set.)
 4. Point Coolify's domain at the **`web`** service (port 80).
 5. Deploy.
 
