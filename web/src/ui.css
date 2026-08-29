@@ -577,6 +577,15 @@ code {
   background: var(--ink);
   color: var(--paper);
 }
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.conn-err {
+  font-size: 11px;
+  color: var(--crit);
+  margin-top: 3px;
+}
 
 /* ---------------- TOUCH ---------------- */
 .touch {

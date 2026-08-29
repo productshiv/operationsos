@@ -22,6 +22,16 @@ export const trueforge = new TrueForge({
 });
 
 /**
+ * Client for quick control-plane calls (listing/authorising connectors). These are not streaming
+ * turns, so they get a bounded timeout instead of the main client's 600s — an unresponsive harness
+ * fails fast rather than hanging the setup.
+ */
+export const trueforgeControl = new TrueForge({
+  baseUrl: CLIENT_BASE_URL,
+  timeoutInSeconds: 20,
+});
+
+/**
  * Separate client for health probes with a short timeout. Reusing the main client would make a
  * hung request pin the UI on "connecting" for the full ten-minute streaming timeout before it
  * could report "offline".

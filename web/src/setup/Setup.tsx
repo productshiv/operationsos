@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useConnectors } from '../state/useConnectors';
+import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { TRUEFORGE_BASE_URL } from '../lib/trueforge';
 import type { Connector } from '../lib/connectors';
 
@@ -9,7 +9,7 @@ import type { Connector } from '../lib/connectors';
  * the harness's MCP layer becomes visible.
  */
 export function Setup({ onClose }: { onClose: () => void }) {
-  const { loading, offline, connectors, refresh, connect } = useConnectors();
+  const { loading, offline, connectors, connectState, refresh, connect } = useConnectors();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -57,7 +57,12 @@ export function Setup({ onClose }: { onClose: () => void }) {
               <div className="prog chi">{authed} / {connectors.length} connected</div>
               <div className="conns">
                 {connectors.map((c) => (
-                  <ConnectorRow key={c.name} connector={c} onConnect={() => connect(c.name)} />
+                  <ConnectorRow
+                    key={c.name}
+                    connector={c}
+                    state={connectState[c.name] ?? 'idle'}
+                    onConnect={(win) => void connect(c.name, win)}
+                  />
                 ))}
               </div>
             </>
@@ -73,17 +78,34 @@ export function Setup({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ConnectorRow({ connector, onConnect }: { connector: Connector; onConnect: () => void }) {
+function ConnectorRow({
+  connector,
+  state,
+  onConnect,
+}: {
+  connector: Connector;
+  state: ConnectState;
+  onConnect: (popup: Window | null) => void;
+}) {
+  // Open the OAuth tab synchronously inside the click so popup blockers don't kill it; the hook
+  // navigates it once the authorization URL arrives.
+  const handleConnect = () => onConnect(window.open('', '_blank'));
+
   return (
     <div className="conn">
       <div className="conn-id">
         <div className="conn-name">{connector.name}</div>
         <div className="conn-url dim">{connector.url}</div>
+        {state === 'error' && (
+          <div className="conn-err">Couldn’t authorise — allow pop-ups, then retry.</div>
+        )}
       </div>
       {connector.status === 'authenticated' && <span className="conn-ok">✓ connected</span>}
       {connector.status === 'not_required' && <span className="conn-ok">✓ ready</span>}
       {connector.status === 'auth_required' && (
-        <button className="btn" onClick={onConnect}>Connect</button>
+        <button className="btn" onClick={handleConnect} disabled={state === 'authorizing'}>
+          {state === 'authorizing' ? 'Authorising…' : state === 'error' ? 'Retry' : 'Connect'}
+        </button>
       )}
     </div>
   );

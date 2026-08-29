@@ -1,4 +1,4 @@
-import { trueforge } from './trueforge';
+import { trueforgeControl } from './trueforge';
 
 export type ConnectorStatus = 'authenticated' | 'auth_required' | 'not_required';
 
@@ -12,7 +12,7 @@ export interface Connector {
 
 /** The MCP servers configured in the harness, with their live auth state. */
 export async function listConnectors(): Promise<Connector[]> {
-  const resp = await trueforge.mcpServers.list();
+  const resp = await trueforgeControl.mcpServers.list();
   return (resp.data ?? []).map((server) => ({
     name: server.name,
     url: server.url,
@@ -30,6 +30,6 @@ export async function authorizeConnector(name: string): Promise<{
   status: ConnectorStatus;
   authorizationUrl?: string;
 }> {
-  const status = await trueforge.mcpServers.authorize(name);
+  const status = await trueforgeControl.mcpServers.authorize(name);
   return { status: status.status, authorizationUrl: status.authorizationUrl };
 }
