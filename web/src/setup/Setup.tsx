@@ -81,7 +81,7 @@ function ConnectorRow({ connector, onConnect }: { connector: Connector; onConnec
         <div className="conn-url dim">{connector.url}</div>
       </div>
       {connector.status === 'authenticated' && <span className="conn-ok">✓ connected</span>}
-      {connector.status === 'not_required' && <span className="conn-ok dim">ready</span>}
+      {connector.status === 'not_required' && <span className="conn-ok">✓ ready</span>}
       {connector.status === 'auth_required' && (
         <button className="btn" onClick={onConnect}>Connect</button>
       )}

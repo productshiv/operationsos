@@ -553,9 +553,6 @@ code {
   color: var(--good);
   white-space: nowrap;
 }
-.conn-ok.dim {
-  color: inherit;
-}
 .setup-foot {
   display: flex;
   gap: 9px;
