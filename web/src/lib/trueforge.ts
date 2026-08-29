@@ -1,15 +1,23 @@
 import { TrueForge } from '@truefoundry/trueforge-sdk';
 
-/**
- * Base URL of the harness. Points at the local instance by default; override with
- * VITE_TRUEFORGE_BASE_URL.
- */
+/** Where the harness actually runs — shown in the UI, and the default in production. */
 export const TRUEFORGE_BASE_URL =
   import.meta.env.VITE_TRUEFORGE_BASE_URL ?? 'http://localhost:8790';
 
+/**
+ * URL the SDK actually calls. In dev the browser can't reach the harness directly (CORS), so we
+ * route through Vite's same-origin `/tf` proxy (see vite.config.ts). An explicit
+ * VITE_TRUEFORGE_BASE_URL (e.g. a harness that already allows this origin) is used as-is.
+ */
+const CLIENT_BASE_URL =
+  import.meta.env.VITE_TRUEFORGE_BASE_URL ??
+  (import.meta.env.DEV && typeof window !== 'undefined'
+    ? new URL('/tf', window.location.origin).toString()
+    : 'http://localhost:8790');
+
 /** Main client. Turns can stream for a long time, so the timeout is generous. */
 export const trueforge = new TrueForge({
-  baseUrl: TRUEFORGE_BASE_URL,
+  baseUrl: CLIENT_BASE_URL,
   timeoutInSeconds: 600,
 });
 
@@ -19,7 +27,7 @@ export const trueforge = new TrueForge({
  * could report "offline".
  */
 const probeClient = new TrueForge({
-  baseUrl: TRUEFORGE_BASE_URL,
+  baseUrl: CLIENT_BASE_URL,
   timeoutInSeconds: 5,
 });
 
