@@ -35,10 +35,7 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
 
       <div className="chatlog" ref={logRef}>
         {items.length === 0 && !busy && (
-          <p className="muted" style={{ fontSize: 13 }}>
-            Ask about usage, revenue, churn, or incidents. I discover the schema and query it — and
-            pause for your sign-off before any query runs.
-          </p>
+          <p className="muted" style={{ fontSize: 13 }}>{agent.blurb}</p>
         )}
 
         {items.map((it) => (
@@ -67,13 +64,18 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
             </div>
             <div className="apbody">
               <p>
-                <b>{agent.name}</b> wants to run{' '}
-                {pending.toolCalls.length > 1 ? `${pending.toolCalls.length} queries` : 'a query'} on{' '}
-                <b>{pending.toolCalls[0]?.server || 'the database'}</b>:
+                <b>{agent.name}</b> wants to run <b>{pending.toolCalls[0]?.tool || 'a tool'}</b>
+                {pending.toolCalls[0]?.server ? (
+                  <>
+                    {' '}on <b>{pending.toolCalls[0].server}</b>
+                  </>
+                ) : null}
+                :
               </p>
-              {pending.toolCalls.map((tc) => tc.query && (
-                <pre key={tc.id} className="sql gold">{tc.query}</pre>
-              ))}
+              {pending.toolCalls.map((tc) => {
+                const body = tc.query || tc.input;
+                return body ? <pre key={tc.id} className="sql gold">{body}</pre> : null;
+              })}
               {pending.toolCalls.some((tc) => tc.warn) && (
                 <div className="apwarn">
                   ⚠ {pending.toolCalls.find((tc) => tc.warn)?.warn} Deny unless you expect this.
