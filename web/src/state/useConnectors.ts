@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addCatalogConnector,
   authorizeConnector,
+  connectorView,
   createConnector,
   disconnectConnector,
   listCatalog,
@@ -145,12 +146,18 @@ export function useConnectors() {
     [refresh],
   );
 
+  // Hide/alias view derived from the connectors present — used by both the panel and the header's
+  // readiness check so a hidden dead connector never triggers an attention dot with no row to fix.
+  const view = useMemo(() => connectorView(state.connectors), [state.connectors]);
+
   return {
     ...state,
     connectState,
     addState,
     catalog,
     catalogState,
+    hidden: view.hidden,
+    label: view.label,
     refresh,
     connect,
     disconnect,

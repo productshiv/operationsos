@@ -10,6 +10,50 @@ export interface Connector {
   authorizationUrl?: string;
 }
 
+/**
+ * A dead connector this deployment replaced with a differently-named working one — so the dead
+ * original is hidden and the replacement is shown under its name. Matched by name AND url, and only
+ * acted on when the replacement is also present, so a different harness with a healthy standalone
+ * connector of the same name is left untouched. Drop once TrueForge ships connector deletion (#494).
+ */
+interface ConnectorReplacement {
+  dead: string;
+  deadUrl: string;
+  replacement: string;
+}
+const REPLACEMENTS: ConnectorReplacement[] = [
+  // `jira`'s OAuth client is pinned to a stale localhost redirect (authorised before
+  // PUBLIC_BASE_URL was set) and this harness version can't delete it; `atlassian` is the fresh,
+  // working Jira/Confluence connector the agent targets.
+  { dead: 'jira', deadUrl: 'https://mcp.atlassian.com/v1/mcp', replacement: 'atlassian' },
+];
+
+export interface ConnectorView {
+  /** Connector names to hide from the list AND from readiness/attention checks. */
+  hidden: Set<string>;
+  /** The label to show for a connector — the dead name it stands in for, or its own. */
+  label: (name: string) => string;
+}
+
+/**
+ * Derive the hide/alias view from the connectors actually present. Deployment-specific workarounds
+ * live in {@link REPLACEMENTS}; everything else is shown as-is. Call it once and use the result for
+ * both rendering and readiness so they never disagree.
+ */
+export function connectorView(list: Connector[]): ConnectorView {
+  const byName = new Map(list.map((c) => [c.name, c] as const));
+  const hidden = new Set<string>();
+  const alias: Record<string, string> = {};
+  for (const r of REPLACEMENTS) {
+    const dead = byName.get(r.dead);
+    if (dead && dead.url === r.deadUrl && byName.has(r.replacement)) {
+      hidden.add(r.dead);
+      alias[r.replacement] = r.dead;
+    }
+  }
+  return { hidden, label: (name) => alias[name] ?? name };
+}
+
 /** The MCP servers configured in the harness, with their live auth state. */
 export async function listConnectors(): Promise<Connector[]> {
   const resp = await trueforgeControl.mcpServers.list();

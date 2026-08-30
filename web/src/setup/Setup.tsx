@@ -196,8 +196,11 @@ function ProviderForm({
 
 function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useConnectors> }) {
   const [custom, setCustom] = useState(false);
-  const { connectors: list, connectState, connect, disconnect, catalog, catalogState, addFromCatalog } = connectors;
-  const authed = list.filter((c) => c.status !== 'auth_required').length;
+  const { connectors: list, connectState, connect, disconnect, catalog, catalogState, addFromCatalog, hidden, label } = connectors;
+  // Hide undeletable dead connectors from the list, but keep them in `configured` so the catalog
+  // still won't re-offer them (they do exist on the harness).
+  const visible = list.filter((c) => !hidden.has(c.name));
+  const authed = visible.filter((c) => c.status !== 'auth_required').length;
   const configured = new Set(list.map((c) => c.name));
   const available = catalog.filter((c) => !configured.has(c.name));
 
@@ -205,7 +208,7 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
     <section className="intg-sec">
       <div className="intg-sec-head">
         <span className="chi intg-sec-title">
-          Connectors{list.length > 0 ? ` · ${authed}/${list.length}` : ''}
+          Connectors{visible.length > 0 ? ` · ${authed}/${visible.length}` : ''}
         </span>
         {!custom && (
           <button className="link-btn" onClick={() => setCustom(true)}>＋ Custom</button>
@@ -220,12 +223,13 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
 
       {!connectors.loading && !connectors.offline && (
         <>
-          {list.length > 0 && (
+          {visible.length > 0 && (
             <div className="intg-list">
-              {list.map((c) => (
+              {visible.map((c) => (
                 <ConnectorRow
                   key={c.name}
                   connector={c}
+                  label={label(c.name)}
                   state={connectState[c.name] ?? 'idle'}
                   onConnect={(win) => void connect(c.name, win)}
                   onDisconnect={() => void disconnect(c.name)}
@@ -247,7 +251,7 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
             </div>
           )}
 
-          {list.length === 0 && available.length === 0 && !custom && (
+          {visible.length === 0 && available.length === 0 && !custom && (
             <p className="dim">No connectors — add a custom one.</p>
           )}
         </>
@@ -347,11 +351,13 @@ function ConnectorLogo({ entry }: { entry: CatalogConnector }) {
 
 function ConnectorRow({
   connector,
+  label,
   state,
   onConnect,
   onDisconnect,
 }: {
   connector: Connector;
+  label: string;
   state: ConnectState;
   onConnect: (popup: Window | null) => void;
   onDisconnect: () => void;
@@ -364,7 +370,7 @@ function ConnectorRow({
   return (
     <div className="conn">
       <div className="conn-id">
-        <div className="conn-name">{connector.name}</div>
+        <div className="conn-name">{label}</div>
         <div className="conn-url dim">{connector.url}</div>
         {state === 'error' && (
           <div className="conn-err">Something went wrong — retry.</div>
