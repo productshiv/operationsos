@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ConnectionState } from '../lib/trueforge';
+import { JukeboxWidget, type Jukebox } from '../music/MusicPlayer';
 
 function useClock(): string {
   const [now, setNow] = useState(() => new Date());
@@ -24,10 +25,12 @@ export function MenuBar({
   conn,
   onManage,
   attention,
+  jukebox,
 }: {
   conn: ConnectionState;
   onManage?: () => void;
   attention?: boolean;
+  jukebox: Jukebox;
 }) {
   const clock = useClock();
   return (
@@ -42,6 +45,7 @@ export function MenuBar({
       </button>
       <span className="m">File&nbsp;TF-007</span>
       <span className="m">View</span>
+      <JukeboxWidget jb={jukebox} />
       <div className="spread">
         <span className={`hstatus hstatus--${conn}`}>harness: {conn}</span>
         <span className="clock chi">{clock}</span>
