@@ -73,8 +73,11 @@ export function AgentChat({
   // injected into the spec at runtime — so a missing/renamed Jira never breaks normal answers, the
   // atlassian/jira naming difference is handled, and agents run on whichever model the CEO picked.
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
-  const { items, busy, pending, needsConnector, turnError, hydrating, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
-    useAgentChat(spec);
+  const {
+    items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration,
+    sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError,
+  } = useAgentChat(spec);
+  const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so
   // it never targets a session that can't invoke it (e.g. Jira was added after the session started).
   // Before the first turn, fall back to the currently-resolved connector.
@@ -107,7 +110,7 @@ export function AgentChat({
 
   const submit = (text: string) => {
     const t = text.trim();
-    if (!t || busy || pending || hydrating) return;
+    if (!t || busy || pending || locked) return;
     setDraft('');
     void send(t);
   };
@@ -141,7 +144,15 @@ export function AgentChat({
         {hydrating && items.length === 0 && (
           <p className="typing muted" style={{ fontSize: 13 }}>…restoring conversation</p>
         )}
-        {!hydrating && items.length === 0 && !busy && (
+        {hydrationError && (
+          <div className="fixcard">
+            <p>Couldn’t restore this conversation — the harness may be busy.</p>
+            <div className="fixrow">
+              <button className="btn go" onClick={retryHydration}>Retry</button>
+            </div>
+          </div>
+        )}
+        {!hydrating && !hydrationError && items.length === 0 && !busy && (
           <p className="muted" style={{ fontSize: 13 }}>{agent.blurb}</p>
         )}
 
@@ -248,7 +259,7 @@ export function AgentChat({
 
       <div className="chips">
         {agent.suggestions.map((s) => (
-          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending || hydrating}>{s}</button>
+          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending || locked}>{s}</button>
         ))}
       </div>
 
@@ -258,10 +269,12 @@ export function AgentChat({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(draft); }}
-          placeholder={hydrating ? 'Restoring conversation…' : `Ask ${agent.name}…`}
-          disabled={busy || !!pending || hydrating}
+          placeholder={
+            hydrationError ? 'Couldn’t restore — Retry above' : hydrating ? 'Restoring conversation…' : `Ask ${agent.name}…`
+          }
+          disabled={busy || !!pending || locked}
         />
-        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending || hydrating}>Send</button>
+        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending || locked}>Send</button>
       </div>
     </>
   );
