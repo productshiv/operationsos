@@ -38,12 +38,24 @@ interface Board {
 
 const KEY = 'oos.taskboard.v1';
 
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+const isTask = (v: unknown): v is Task =>
+  isObject(v) && typeof v.id === 'string' && typeof v.title === 'string' && typeof v.assignedTo === 'string';
+
 function load(): Board {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const p = JSON.parse(raw) as Partial<Board>;
-      return { tasks: p.tasks ?? [], attention: p.attention ?? {} };
+      // Validate runtime shapes — valid JSON with the wrong types (e.g. `{"tasks":{}}`) must not
+      // slip through and crash a later `.filter`.
+      const p = JSON.parse(raw) as unknown;
+      const obj = isObject(p) ? p : {};
+      const tasks = Array.isArray(obj.tasks) ? obj.tasks.filter(isTask) : [];
+      const attention = isObject(obj.attention)
+        ? (obj.attention as Record<string, AttentionItem>)
+        : {};
+      return { tasks, attention };
     }
   } catch {
     /* storage disabled / corrupt — start empty */

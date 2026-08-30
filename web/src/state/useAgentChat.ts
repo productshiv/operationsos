@@ -123,9 +123,11 @@ function friendlyError(message: string): string {
   return message;
 }
 
-/** A tool call is a Jira issue creation — used to route a follow-up task when it's authorised. */
-function isTicketCreate(tool: string, server: string): boolean {
-  return /create/i.test(tool) && /(issue|jira|atlassian)/i.test(`${tool} ${server}`);
+/** A tool call is a Jira *issue* creation — used to route a follow-up task when it's authorised.
+ *  Requires "issue" in the tool name, so a Confluence page create (createPage/…) is not mistaken
+ *  for a ticket just because it's on the atlassian server. */
+function isTicketCreate(tool: string): boolean {
+  return /create/i.test(tool) && /issue/i.test(tool);
 }
 /** Pull a human title out of a create-issue tool's arguments (summary field), if present. */
 function ticketTitle(input?: string): string {
@@ -402,12 +404,13 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     };
   }, [instructions, modelName, serverKey, rebuild, hydrateNonce]);
 
-  // Publish to the floor's board whether this agent is waiting on the CEO (a paused approval gate),
-  // so the "YOU" badge reflects it — set while a gate is open (live or restored), cleared when the
-  // CEO resolves it. Not cleared on unmount, so closing a paused desk still flags that it needs you.
+  // Flag on the floor's board when this agent is waiting on the CEO (a paused approval gate), so the
+  // "YOU" badge reflects it. Only SET here — never clear on a null `pending`, because during hydration
+  // pending is momentarily null (and stays null if a restore fails), and clearing then would wipe a
+  // real, still-unresolved approval from the board. Attention is cleared where it's actually resolved:
+  // in decide() (authorise/deny) and newChat().
   useEffect(() => {
     if (pending) setAttention(agentId, pending.toolCalls[0]?.tool ?? 'a tool');
-    else clearAttention(agentId);
   }, [pending, agentId]);
 
   /** Re-run the restore after a transient lookup/history failure. */
@@ -423,6 +426,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
     // before the replacement gets its first turn.
     if (sessionRef.current) abandonSession(sessionRef.current);
+    clearAttention(agentId); // starting fresh — no longer waiting on the CEO
     orderRef.current = [];
     basesRef.current.clear();
     userTextRef.current.clear();
@@ -437,7 +441,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     setSessionServers(null);
     setHydrationError(false);
     setHydrating(false);
-  }, []);
+  }, [agentId]);
 
   const send = useCallback(
     async (text: string) => {
@@ -489,10 +493,11 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
       // The harness accepted the decision — close the gate now so the reply streams in its place,
       // instead of the gold card lingering on screen while the response is still being generated.
       setPending((cur) => (cur === resolving ? null : cur));
+      clearAttention(agentId); // the CEO has acted on this gate — no longer waiting on you
       // An authorised ticket becomes a routed task for the Operations Manager to coordinate.
       if (status === 'allow') {
         for (const tc of resolving.toolCalls) {
-          if (isTicketCreate(tc.tool, tc.server)) {
+          if (isTicketCreate(tc.tool)) {
             addTask({ title: ticketTitle(tc.input), createdBy: agentId, assignedTo: 'handler' });
           }
         }

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { AGENTS } from '../lib/agents';
-import { useAttention, useOpenTasks } from '../state/tasks';
+import { resolveTask, useAttention, useOpenTasks } from '../state/tasks';
 
 /** Map an agent/desk id to its display name (falls back to the id). */
 const agentName = (id: string) => AGENTS[id]?.name ?? id;
@@ -52,12 +52,17 @@ export function AttentionPanel({ onClose, onGoto }: { onClose: () => void; onGot
             ) : (
               <div className="board-list">
                 {tasks.map((t) => (
-                  <button key={t.id} className="board-row" onClick={() => onGoto(t.assignedTo)}>
-                    <span className="board-row-name">{t.title}</span>
-                    <span className="dim">
-                      {agentName(t.createdBy)} → {agentName(t.assignedTo)} ▸
-                    </span>
-                  </button>
+                  <div key={t.id} className="board-task">
+                    <button className="board-row-open" onClick={() => onGoto(t.assignedTo)}>
+                      <span className="board-row-name">{t.title}</span>
+                      <span className="dim">
+                        {agentName(t.createdBy)} → {agentName(t.assignedTo)} ▸
+                      </span>
+                    </button>
+                    <button className="board-done" title="Mark done" onClick={() => resolveTask(t.id)}>
+                      Done
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
