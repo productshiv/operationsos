@@ -236,9 +236,19 @@ export function resolveJiraConnector(list: Connector[]): string | null {
  * have, so injecting only when it exists keeps every agent's normal answers reliable. See the note
  * on {@link TICKET_INSTRUCTION}.
  */
-export function buildAgentSpec(agent: AgentConfig, jiraName: string | null): Record<string, unknown> {
-  if (!agent.ticketing || !jiraName) return agent.spec;
-  const servers = Array.isArray(agent.spec.mcpServers) ? [...(agent.spec.mcpServers as unknown[])] : [];
-  servers.push({ name: jiraName, preload: agent.ticketing === 'preload' });
-  return { ...agent.spec, mcpServers: servers };
+export function buildAgentSpec(
+  agent: AgentConfig,
+  jiraName: string | null,
+  model?: string,
+): Record<string, unknown> {
+  const spec: Record<string, unknown> = { ...agent.spec };
+  // Run on the CEO's chosen default model (falls back to the spec's own AGENT_MODEL).
+  if (model) spec.model = { name: model };
+  // Attach the resolved Jira connector when present and the agent opts in.
+  if (agent.ticketing && jiraName) {
+    const servers = Array.isArray(agent.spec.mcpServers) ? [...(agent.spec.mcpServers as unknown[])] : [];
+    servers.push({ name: jiraName, preload: agent.ticketing === 'preload' });
+    spec.mcpServers = servers;
+  }
+  return spec;
 }

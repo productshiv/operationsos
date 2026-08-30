@@ -10,11 +10,14 @@ import { AgentChat } from '../agents/AgentChat';
 export function DeskWindow({
   desk,
   jira,
+  agentModel,
   onClose,
 }: {
   desk: Desk;
   /** The live Jira connector name (or null), threaded to the chat for the "Open a ticket" action. */
   jira: string | null | undefined;
+  /** The model agents run on (the CEO's chosen default), injected into the agent spec. */
+  agentModel: string;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -35,7 +38,7 @@ export function DeskWindow({
         </div>
         <div className="wbody">
           {agent ? (
-            <AgentChat agent={agent} jira={jira} />
+            <AgentChat agent={agent} jira={jira} agentModel={agentModel} />
           ) : desk.kind === 'door' ? (
             <p>
               <b>{desk.plate.split(' ')[0]}</b> comes online in a later update. The desk is wired — the

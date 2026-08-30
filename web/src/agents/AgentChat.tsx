@@ -60,13 +60,24 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * and — when a tool needs sign-off — a gold approval gate right in the thread. The agent doesn't
  * touch the database until you authorise.
  */
-export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | null | undefined }) {
-  // Jira (the live connector name, or null) is resolved by the app from shared connector state and
-  // injected into the spec at runtime — so a missing or renamed Jira never breaks this agent's normal
-  // answers, and the atlassian/jira naming difference is handled for us.
-  const spec = useMemo(() => buildAgentSpec(agent, jira ?? null), [agent, jira]);
-  const { items, busy, pending, needsConnector, turnError, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
-    useAgentChat(spec);
+export function AgentChat({
+  agent,
+  jira,
+  agentModel,
+}: {
+  agent: AgentConfig;
+  jira: string | null | undefined;
+  agentModel: string;
+}) {
+  // Jira (the live connector name, or null) and the chosen default model are resolved by the app and
+  // injected into the spec at runtime — so a missing/renamed Jira never breaks normal answers, the
+  // atlassian/jira naming difference is handled, and agents run on whichever model the CEO picked.
+  const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
+  const {
+    items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration,
+    sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError,
+  } = useAgentChat(spec);
+  const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so
   // it never targets a session that can't invoke it (e.g. Jira was added after the session started).
   // Before the first turn, fall back to the currently-resolved connector.
@@ -99,7 +110,7 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
 
   const submit = (text: string) => {
     const t = text.trim();
-    if (!t || busy || pending) return;
+    if (!t || busy || pending || locked) return;
     setDraft('');
     void send(t);
   };
@@ -130,7 +141,18 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
       </div>
 
       <div className="chatlog" ref={logRef}>
-        {items.length === 0 && !busy && (
+        {hydrating && items.length === 0 && (
+          <p className="typing muted" style={{ fontSize: 13 }}>…restoring conversation</p>
+        )}
+        {hydrationError && (
+          <div className="fixcard">
+            <p>Couldn’t restore this conversation — the harness may be busy.</p>
+            <div className="fixrow">
+              <button className="btn go" onClick={retryHydration}>Retry</button>
+            </div>
+          </div>
+        )}
+        {!hydrating && !hydrationError && items.length === 0 && !busy && (
           <p className="muted" style={{ fontSize: 13 }}>{agent.blurb}</p>
         )}
 
@@ -237,7 +259,7 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
 
       <div className="chips">
         {agent.suggestions.map((s) => (
-          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending}>{s}</button>
+          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending || locked}>{s}</button>
         ))}
       </div>
 
@@ -247,10 +269,12 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(draft); }}
-          placeholder={`Ask ${agent.name}…`}
-          disabled={busy || !!pending}
+          placeholder={
+            hydrationError ? 'Couldn’t restore — Retry above' : hydrating ? 'Restoring conversation…' : `Ask ${agent.name}…`
+          }
+          disabled={busy || !!pending || locked}
         />
-        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending}>Send</button>
+        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending || locked}>Send</button>
       </div>
     </>
   );

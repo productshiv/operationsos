@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
+import { fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
 
 export interface ToolActivity {
   id: string;
@@ -129,6 +130,15 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const [needsConnector, setNeedsConnector] = useState<string | null>(null);
   // Set when a turn failed for another reason (e.g. a network error) — shown with a Try-again.
   const [turnError, setTurnError] = useState<string | null>(null);
+  // True while we look up and replay this agent's prior session on open, so the composer waits and a
+  // send can't race in and spin up a second (empty) session before the existing one is restored.
+  const [hydrating, setHydrating] = useState(true);
+  // Set when restoring the prior conversation FAILED (lookup or history load errored). We then keep
+  // the composer disabled and offer a Retry, rather than silently starting a second conversation
+  // (forking) or attaching a session whose history we couldn't actually load (hidden divergence).
+  const [hydrationError, setHydrationError] = useState(false);
+  // Bumped by retryHydration() to re-run the restore effect.
+  const [hydrateNonce, setHydrateNonce] = useState(0);
 
   const sessionRef = useRef<string | null>(null);
   // The MCP server names the live session was actually created with — frozen at creation, since the
@@ -290,10 +300,99 @@ export function useAgentChat(spec: Record<string, unknown>) {
     [spec, rebuild],
   );
 
+  // On open, restore this agent's conversation from the harness (cross-device, no localStorage):
+  // find its prior session by the stable instructions, reuse the id so the agent keeps its context,
+  // and replay the session's events into the transcript. Keyed on `instructions` (stable — Jira
+  // injection doesn't change it) so it doesn't re-run and duplicate when the resolved spec updates;
+  // a fresh run each StrictMode/remount cancels the previous one before it mutates anything.
+  const instructions = typeof spec.instructions === 'string' ? spec.instructions : '';
+  const modelName = (spec.model as { name?: string } | undefined)?.name ?? '';
+  // Connector set is part of the conversation identity (so a Jira-now-available agent gets a fresh,
+  // capable session rather than reusing a Jira-free one). Stable string key for the effect deps.
+  const serverKey = Array.isArray(spec.mcpServers)
+    ? (spec.mcpServers as Array<{ name?: string }>).map((s) => s?.name ?? '').filter(Boolean).sort().join(',')
+    : '';
+  useEffect(() => {
+    let cancelled = false;
+    // instructions+model+connectors identify a conversation; if any changes, this is a different
+    // conversation, so clear the current transcript before restoring.
+    orderRef.current = [];
+    basesRef.current.clear();
+    userTextRef.current.clear();
+    toolResultRef.current.clear();
+    sessionRef.current = null;
+    setItems([]);
+    setPending(null);
+    setSessionServers(null);
+    setHydrationError(false);
+    setHydrating(true);
+    void (async () => {
+      if (!instructions || !modelName) {
+        if (!cancelled) setHydrating(false);
+        return;
+      }
+      const serverNames = serverKey ? serverKey.split(',') : [];
+      const look = await findAgentSession(instructions, modelName, serverNames);
+      if (cancelled) return;
+      if (look.status === 'error') {
+        // Lookup failed — don't start a new session (that would fork an existing conversation).
+        setHydrationError(true);
+        setHydrating(false);
+        return;
+      }
+      if (look.status === 'none') {
+        setHydrating(false); // no prior conversation — a fresh one starts on first send
+        return;
+      }
+      const load = await fetchHistory(look.session.id);
+      if (cancelled) return;
+      if (load.status === 'error') {
+        // History load failed — don't attach the session (its context would be hidden but live),
+        // which would make the visible transcript diverge from what the model actually remembers.
+        setHydrationError(true);
+        setHydrating(false);
+        return;
+      }
+      sessionRef.current = look.session.id;
+      setSessionServers(look.session.mcpServers);
+      for (const h of load.history.items) {
+        if (h.kind === 'user') {
+          const key = `user:${counterRef.current++}`;
+          userTextRef.current.set(key, h.text);
+          orderRef.current.push(key);
+        } else if (h.kind === 'assistant') {
+          basesRef.current.set(h.id, { id: h.id, threadId: 'main', content: h.text, toolCalls: h.toolCalls });
+          orderRef.current.push(h.id);
+        } else {
+          toolResultRef.current.set(h.toolCallId, h.content);
+        }
+      }
+      rebuild();
+      // Restore an approval left unresolved when the session was closed mid-gate, so the CEO can still
+      // authorise/deny it instead of being stranded with a paused (un-sendable) session.
+      if (load.history.pending) {
+        const toolCalls: PendingCall[] = load.history.pending.toolCalls.map((raw: RawToolCallLike) => {
+          const info = readTool(raw);
+          return { id: info.id, server: info.server, tool: info.tool, query: info.query ?? '', input: info.input, warn: policyWarning(info) };
+        });
+        setPending({ threadId: load.history.pending.threadId, toolCalls });
+      }
+      setHydrating(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [instructions, modelName, serverKey, rebuild, hydrateNonce]);
+
+  /** Re-run the restore after a transient lookup/history failure. */
+  const retryHydration = useCallback(() => setHydrateNonce((n) => n + 1), []);
+
   const send = useCallback(
     async (text: string) => {
       const t = text.trim();
-      if (busy || pending || !t) return; // don't start a turn while a checkpoint is open
+      // Don't start a turn while restoring, paused at a gate, or after a restore failure (a send then
+      // would fork the conversation instead of continuing the existing one).
+      if (busy || pending || hydrating || hydrationError || !t) return;
       const key = `user:${counterRef.current++}`;
       userTextRef.current.set(key, t);
       orderRef.current.push(key);
@@ -301,7 +400,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
       rebuild();
       await runTurn(t);
     },
-    [busy, pending, runTurn, rebuild],
+    [busy, pending, hydrating, hydrationError, runTurn, rebuild],
   );
 
   /** Re-run the last message — e.g. after adding the connector it needed. */
@@ -360,6 +459,11 @@ export function useAgentChat(spec: Record<string, unknown>) {
     pending,
     needsConnector,
     turnError,
+    /** True while restoring a prior conversation on open. */
+    hydrating,
+    /** True when restoring failed (lookup/history error) — composer stays disabled, offer Retry. */
+    hydrationError,
+    retryHydration,
     /** MCP server names the live session was created with, or null before the first turn. */
     sessionServers,
     send,
