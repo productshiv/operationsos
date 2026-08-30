@@ -3,7 +3,7 @@ import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { useModels } from '../state/useModels';
 import { useAgentModel } from '../state/useAgentModel';
 import type { CatalogConnector, Connector, ConnectorAuthKind } from '../lib/connectors';
-import type { ModelRef } from '../lib/models';
+import { CUSTOM_PRESETS, type CatalogProvider, type CustomPreset, type ProviderConfig, type ProviderModel } from '../lib/models';
 
 /**
  * First-run / platform-setup window. Everything an agent needs to run — the model it thinks with
@@ -73,6 +73,25 @@ export function Setup({
 
 /* ------------------------------- MODELS ------------------------------- */
 
+/** Pretty labels for the harness's well-known provider types. */
+const WELL_KNOWN_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  'google-gemini': 'Google Gemini',
+  fireworks: 'Fireworks',
+  zai: 'Z.AI',
+  moonshot: 'Moonshot',
+  alibaba: 'Alibaba',
+  together: 'Together AI',
+};
+const providerLabel = (type: string) => WELL_KNOWN_LABELS[type] ?? type;
+
+type ModelFlow =
+  | { kind: 'list' }
+  | { kind: 'pick' }
+  | { kind: 'wellknown'; type: string; models: ProviderModel[] }
+  | { kind: 'custom'; preset?: CustomPreset; edit?: ProviderConfig };
+
 function ModelsSection({
   models,
   agentModel,
@@ -80,7 +99,7 @@ function ModelsSection({
   models: ReturnType<typeof useModels>;
   agentModel: ReturnType<typeof useAgentModel>;
 }) {
-  const [adding, setAdding] = useState(false);
+  const [flow, setFlow] = useState<ModelFlow>({ kind: 'list' });
 
   // Agents run on the chosen default model — a differently named provider doesn't make them runnable.
   const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === agentModel.model);
@@ -89,38 +108,45 @@ function ModelsSection({
     <section className="intg-sec">
       <div className="intg-sec-head">
         <span className="chi intg-sec-title">Models · {models.models.length}</span>
-        {!adding && (
-          <button className="link-btn" onClick={() => setAdding(true)}>＋ Add provider</button>
+        {flow.kind === 'list' && (
+          <button className="link-btn" onClick={() => setFlow({ kind: 'pick' })}>＋ Add provider</button>
         )}
       </div>
 
       {models.loading && <p className="dim">Loading…</p>}
+      {!models.loading && models.offline && <p className="dim">Couldn’t reach model settings — refresh.</p>}
 
-      {!models.loading && models.offline && (
-        <p className="dim">Couldn’t reach model settings — refresh.</p>
-      )}
-
-      {!models.loading && !models.offline && (
+      {!models.loading && !models.offline && flow.kind === 'list' && (
         <>
-          {models.models.length === 0 && !adding && (
-            <p className="dim">No model yet — agents can’t run.</p>
-          )}
+          {models.providers.length === 0 && <p className="dim">No model yet — agents can’t run.</p>}
 
-          {models.models.length > 0 && (
-            <div className="intg-list">
-              {models.models.map((m) => (
-                <ModelRow
-                  key={`${m.provider}/${m.model}`}
-                  model={m}
-                  isDefault={`${m.provider}/${m.model}` === agentModel.model}
-                  onUse={() => agentModel.setModel(`${m.provider}/${m.model}`)}
-                />
-              ))}
+          {models.providers.map((p) => (
+            <div key={p.name} className="prov">
+              <div className="prov-head">
+                <span className="prov-name">{providerLabel(p.name)}</span>
+                {p.isCustom && (
+                  <button className="link-btn" onClick={() => setFlow({ kind: 'custom', edit: p })}>Edit</button>
+                )}
+              </div>
+              <div className="intg-list">
+                {p.models.map((m) => {
+                  const ref = `${p.name}/${m.name}`;
+                  return (
+                    <ModelRow
+                      key={ref}
+                      label={ref}
+                      modelId={m.modelId}
+                      isDefault={ref === agentModel.model}
+                      onUse={() => agentModel.setModel(ref)}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          )}
+          ))}
 
           {/* The chosen default model isn't configured on the harness — agents can't run on it. */}
-          {models.models.length > 0 && !hasAgentModel && !adding && (
+          {models.providers.length > 0 && !hasAgentModel && (
             <p className="dim intg-form-note">
               Agents are set to <code>{agentModel.model}</code>, which isn’t configured — add it, or pick
               a listed model as the default.
@@ -129,25 +155,48 @@ function ModelsSection({
         </>
       )}
 
-      {adding && <ProviderForm models={models} onDone={() => setAdding(false)} />}
+      {flow.kind === 'pick' && (
+        <ProviderPicker
+          catalog={models.catalog}
+          onWellKnown={(type, ms) => setFlow({ kind: 'wellknown', type, models: ms })}
+          onPreset={(preset) => setFlow({ kind: 'custom', preset })}
+          onCustom={() => setFlow({ kind: 'custom' })}
+          onCancel={() => setFlow({ kind: 'list' })}
+        />
+      )}
+
+      {flow.kind === 'wellknown' && (
+        <WellKnownForm
+          models={models}
+          type={flow.type}
+          presetModels={flow.models}
+          onDone={() => setFlow({ kind: 'list' })}
+        />
+      )}
+
+      {flow.kind === 'custom' && (
+        <CustomForm models={models} preset={flow.preset} edit={flow.edit} onDone={() => setFlow({ kind: 'list' })} />
+      )}
     </section>
   );
 }
 
 function ModelRow({
-  model,
+  label,
+  modelId,
   isDefault,
   onUse,
 }: {
-  model: ModelRef;
+  label: string;
+  modelId: string;
   isDefault: boolean;
   onUse: () => void;
 }) {
   return (
     <div className="conn">
       <div className="conn-id">
-        <div className="conn-name">{model.provider}/{model.model}</div>
-        <div className="conn-url dim">{model.modelId}</div>
+        <div className="conn-name">{label}</div>
+        <div className="conn-url dim">{modelId}</div>
       </div>
       {isDefault ? (
         <span className="conn-ok">✓ agents’ model</span>
@@ -158,29 +207,110 @@ function ModelRow({
   );
 }
 
-function ProviderForm({
+/** Pick a provider to add: a well-known one (key only), a prefilled gateway (OpenRouter/GMI), or fully custom. */
+function ProviderPicker({
+  catalog,
+  onWellKnown,
+  onPreset,
+  onCustom,
+  onCancel,
+}: {
+  catalog: CatalogProvider[];
+  onWellKnown: (type: string, models: ProviderModel[]) => void;
+  onPreset: (preset: CustomPreset) => void;
+  onCustom: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="intg-form">
+      <p className="dim intg-form-note">Pick a provider — most just need an API key.</p>
+      <div className="prov-picker">
+        {catalog.map((c) => (
+          <button key={c.type} className="prov-tile" onClick={() => onWellKnown(c.type, c.models)}>
+            {providerLabel(c.type)}
+          </button>
+        ))}
+        {CUSTOM_PRESETS.map((p) => (
+          <button key={p.name} className="prov-tile" onClick={() => onPreset(p)}>
+            {p.label}
+          </button>
+        ))}
+        <button className="prov-tile" onClick={onCustom}>Custom…</button>
+      </div>
+      <div className="form-actions">
+        <button className="btn" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/** A well-known provider (openai, anthropic, …): the user supplies only a key; models are preset. */
+function WellKnownForm({
   models,
+  type,
+  presetModels,
   onDone,
 }: {
   models: ReturnType<typeof useModels>;
+  type: string;
+  presetModels: ProviderModel[];
   onDone: () => void;
 }) {
-  // Prefilled for OpenRouter, the OpenAI-compatible gateway the agents target by default.
-  const [name, setName] = useState('openrouter');
-  const [baseUrl, setBaseUrl] = useState('https://openrouter.ai/api/v1');
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('minimax-m3');
-  const [modelId, setModelId] = useState('');
+  const save = async () => {
+    if ((await models.addWellKnown(type, apiKey.trim(), presetModels)) === true) onDone();
+  };
+  return (
+    <div className="intg-form">
+      <p className="intg-form-note"><b>{providerLabel(type)}</b> — just add your API key.</p>
+      <Field label="API key">
+        <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-…" />
+      </Field>
+      <p className="dim intg-form-note">
+        Adds {presetModels.length} model{presetModels.length === 1 ? '' : 's'}: {presetModels.map((m) => m.name).join(', ')}.
+      </p>
+      {models.saveState === 'error' && <div className="conn-err">Couldn’t add — check the key.</div>}
+      <div className="form-actions">
+        <button className="btn" onClick={onDone} disabled={models.saveState === 'saving'}>Cancel</button>
+        <button className="btn primary" onClick={() => void save()} disabled={!apiKey.trim() || models.saveState === 'saving'}>
+          {models.saveState === 'saving' ? 'Saving…' : 'Add provider'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
-  const ready = name.trim() && baseUrl.trim() && apiKey.trim() && modelName.trim() && modelId.trim();
+/** A custom OpenAI-compatible provider — from a preset (OpenRouter/GMI), blank, or editing an existing one. */
+function CustomForm({
+  models,
+  preset,
+  edit,
+  onDone,
+}: {
+  models: ReturnType<typeof useModels>;
+  preset?: CustomPreset;
+  edit?: ProviderConfig;
+  onDone: () => void;
+}) {
+  const editModel = edit?.models[0];
+  const [name, setName] = useState(edit?.name ?? preset?.name ?? '');
+  const [baseUrl, setBaseUrl] = useState(edit?.baseUrl ?? preset?.baseUrl ?? '');
+  const [apiKey, setApiKey] = useState('');
+  const [modelName, setModelName] = useState(editModel?.name ?? preset?.model.name ?? '');
+  const [modelId, setModelId] = useState(editModel?.modelId ?? preset?.model.modelId ?? '');
+
+  // Editing keeps the stored (redacted) key when the field is left blank; a new provider needs a key.
+  const keyToSend = apiKey.trim() || (edit?.apiKeyRedacted ?? '');
+  const ready = name.trim() && baseUrl.trim() && keyToSend && modelName.trim() && modelId.trim();
 
   const save = async () => {
     const ok = await models.addProvider({
       name: name.trim(),
       baseUrl: baseUrl.trim(),
-      apiKey: apiKey.trim(),
+      apiKey: keyToSend,
       modelName: modelName.trim(),
       modelId: modelId.trim(),
+      properties: editModel?.properties ?? preset?.model.properties,
     });
     if (ok) onDone();
   };
@@ -188,36 +318,35 @@ function ProviderForm({
   return (
     <div className="intg-form">
       <Field label="Provider">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="openrouter" />
+        {/* Name is the identity for upsert — locked while editing so it updates in place. */}
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="openrouter" disabled={!!edit} />
       </Field>
       <Field label="Base URL">
         <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://openrouter.ai/api/v1" />
       </Field>
       <Field label="API key">
-        <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-or-…" />
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={edit ? 'Leave blank to keep current key' : 'sk-…'}
+        />
       </Field>
       <div className="form-row">
         <Field label="Model name">
           <input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="minimax-m3" />
         </Field>
         <Field label="Model ID">
-          <input value={modelId} onChange={(e) => setModelId(e.target.value)} placeholder="minimax/minimax-m1" />
+          <input value={modelId} onChange={(e) => setModelId(e.target.value)} placeholder="MiniMaxAI/MiniMax-M3" />
         </Field>
       </div>
 
-      <p className="dim intg-form-note">
-        Re-saving with an existing provider name updates it — use this to fix a wrong base URL or model
-        ID (e.g. a provider returning 404).
-      </p>
-
-      {models.saveState === 'error' && (
-        <div className="conn-err">Couldn’t add — check the key and URL.</div>
-      )}
+      {models.saveState === 'error' && <div className="conn-err">Couldn’t save — check the key and URL.</div>}
 
       <div className="form-actions">
         <button className="btn" onClick={onDone} disabled={models.saveState === 'saving'}>Cancel</button>
         <button className="btn primary" onClick={() => void save()} disabled={!ready || models.saveState === 'saving'}>
-          {models.saveState === 'saving' ? 'Saving…' : 'Add provider'}
+          {models.saveState === 'saving' ? 'Saving…' : edit ? 'Save changes' : 'Add provider'}
         </button>
       </div>
     </div>
