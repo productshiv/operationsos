@@ -520,6 +520,365 @@
   box-shadow: none;
 }
 
+/* ---------------- HR ROOM + FLOOR PARTY ---------------- */
+.hrroom {
+  position: absolute;
+  border: 2px solid var(--ink);
+  background: var(--sink);
+  background-image: repeating-linear-gradient(90deg, var(--dot) 0 2px, transparent 2px 9px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--sh);
+}
+.hrroom-sign {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+.hrroom-note {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  text-transform: uppercase;
+}
+.hrcall {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The lit dance floor, over the rug. */
+.dancefloor {
+  position: absolute;
+  left: 300px;
+  top: 210px;
+  width: 380px;
+  height: 190px;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 38px),
+    repeating-linear-gradient(0deg, var(--ink) 0 2px, transparent 2px 38px);
+  opacity: 0.28;
+  animation: floorpulse 1.1s steps(2) infinite;
+}
+@keyframes floorpulse {
+  0%, 100% { opacity: 0.16; }
+  50% { opacity: 0.36; }
+}
+
+/* The bar TV — sits above the dance floor, showing the jukebox track. */
+.bartv {
+  position: absolute;
+  /* Mounted on the wall above the bar, in the clear band between the desk row and the rug. */
+  left: 404px;
+  top: 180px;
+  width: 172px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bartv-screen {
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 3px 3px 0 var(--sh);
+  padding: 3px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bartv-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 13px;
+}
+.bartv-bars i {
+  flex: 1;
+  background: var(--ink);
+  height: 30%;
+}
+/* Only animate while the jukebox is actually playing, so the TV reflects play/pause. The name is
+   TV-specific — a plain `eq` collides with the jukebox widget's own `eq` keyframes below. */
+.bartv-bars.playing i {
+  animation: bartveq 0.62s ease-in-out infinite alternate;
+}
+@keyframes bartveq {
+  from { height: 18%; }
+  to { height: 100%; }
+}
+.bartv-title {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bartv-stand {
+  width: 26px;
+  height: 8px;
+  border: 2px solid var(--ink);
+  border-top: none;
+  background: var(--panel);
+}
+
+/* Dancing. Everyone shares one beat, but each agent has its own move, and the floor's left and right
+   halves are offset by half a beat so the room reads as call-and-response, not one blob. */
+.partygoer.dancing .armL {
+  transform-origin: 4px 16px;
+}
+.partygoer.dancing .armR {
+  transform-origin: 16px 16px;
+}
+/* A shared 16-beat routine (0.8s per beat), danced in lockstep. It isn't a single repeating
+   shuffle: the two halves of the floor first split apart and come back, then everyone HOLDS on the
+   spot for four beats doing only their own move, then they trade single steps. Both halves run the
+   same duration and start together, so they stay in sync while doing complementary things.
+   `steps(1)` makes each beat a discrete step rather than a slide. */
+.partygoer.dancing.half-l {
+  animation: choreoL 12.8s steps(1) infinite;
+}
+.partygoer.dancing.half-r {
+  animation: choreoR 12.8s steps(1) infinite;
+}
+/* Left half: out two steps left, back, two right, back, hold, then trade single steps. */
+@keyframes choreoL {
+  0%     { transform: translateX(0); }
+  6.25%  { transform: translateX(-14px); }
+  12.5%  { transform: translateX(-28px); }
+  18.75% { transform: translateX(-14px); }
+  25%    { transform: translateX(0); }
+  31.25% { transform: translateX(14px); }
+  37.5%  { transform: translateX(28px); }
+  43.75% { transform: translateX(14px); }
+  50%    { transform: translateX(0); }
+  /* beats 9–12: hold the spot — just the individual moves */
+  75%    { transform: translateX(0); }
+  81.25% { transform: translateX(-14px); }
+  87.5%  { transform: translateX(0); }
+  93.75% { transform: translateX(14px); }
+  100%   { transform: translateX(0); }
+}
+/* Right half: the mirror, so the groups open apart and close together. */
+@keyframes choreoR {
+  0%     { transform: translateX(0); }
+  6.25%  { transform: translateX(14px); }
+  12.5%  { transform: translateX(28px); }
+  18.75% { transform: translateX(14px); }
+  25%    { transform: translateX(0); }
+  31.25% { transform: translateX(-14px); }
+  37.5%  { transform: translateX(-28px); }
+  43.75% { transform: translateX(-14px); }
+  50%    { transform: translateX(0); }
+  75%    { transform: translateX(0); }
+  81.25% { transform: translateX(14px); }
+  87.5%  { transform: translateX(0); }
+  93.75% { transform: translateX(-14px); }
+  100%   { transform: translateX(0); }
+}
+
+/* bob — up-down with a little tilt */
+.partygoer.move-bob .roamer-body { animation: dcBob 0.5s steps(2) infinite; }
+@keyframes dcBob {
+  0% { transform: translateY(0) rotate(-4deg); }
+  100% { transform: translateY(-3px) rotate(4deg); }
+}
+
+/* sway — side to side, arms out */
+.partygoer.move-sway .roamer-body { animation: dcSway 0.72s ease-in-out infinite alternate; }
+.partygoer.move-sway .armL { animation: dcArmOutL 0.72s ease-in-out infinite alternate; }
+.partygoer.move-sway .armR { animation: dcArmOutR 0.72s ease-in-out infinite alternate; }
+@keyframes dcSway {
+  0% { transform: translateX(-2px) rotate(-7deg); }
+  100% { transform: translateX(2px) rotate(7deg); }
+}
+@keyframes dcArmOutL { 0% { transform: rotate(0deg); } 100% { transform: rotate(38deg); } }
+@keyframes dcArmOutR { 0% { transform: rotate(0deg); } 100% { transform: rotate(-38deg); } }
+
+/* step-touch — alternating legs, small hop */
+.partygoer.move-stepTouch .roamer-body { animation: dcHop 0.5s steps(2) infinite; }
+.partygoer.move-stepTouch .legA { animation: dcLegA 0.5s steps(1) infinite; }
+.partygoer.move-stepTouch .legB { animation: dcLegB 0.5s steps(1) infinite; }
+@keyframes dcHop { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
+@keyframes dcLegA { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes dcLegB { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+
+/* raise the roof — both arms punching up */
+.partygoer.move-raiseRoof .roamer-body { animation: dcBob 0.5s steps(2) infinite; }
+.partygoer.move-raiseRoof .armL { animation: dcRoofL 0.5s steps(2) infinite; }
+.partygoer.move-raiseRoof .armR { animation: dcRoofR 0.5s steps(2) infinite; }
+@keyframes dcRoofL { 0% { transform: rotate(-10deg); } 100% { transform: rotate(-72deg); } }
+@keyframes dcRoofR { 0% { transform: rotate(10deg); } 100% { transform: rotate(72deg); } }
+
+/* shimmy — quick side shuffle, arms alternating */
+.partygoer.move-shimmy .roamer-body { animation: dcShimmy 0.34s steps(2) infinite; }
+.partygoer.move-shimmy .armL { animation: dcRoofL 0.68s steps(2) infinite; }
+.partygoer.move-shimmy .armR { animation: dcRoofR 0.68s steps(2) infinite reverse; }
+@keyframes dcShimmy {
+  0% { transform: translateX(-3px); }
+  100% { transform: translateX(3px); }
+}
+
+/* spin — turn on the spot (the sprite flips), with a bob */
+.partygoer.move-spin .roamer-body { animation: dcSpin 1.44s steps(4) infinite; }
+@keyframes dcSpin {
+  0% { transform: scaleX(1) translateY(0); }
+  25% { transform: scaleX(-1) translateY(-3px); }
+  50% { transform: scaleX(1) translateY(0); }
+  75% { transform: scaleX(-1) translateY(-3px); }
+  100% { transform: scaleX(1) translateY(0); }
+}
+/* Party mode dims the working floor so the bar reads as the focus. */
+.viewport.partymode .desk .scr,
+.viewport.partymode .door,
+.viewport.partymode .hrroom {
+  opacity: 0.45;
+}
+
+
+/* ---- the bar: back shelf, working bartender, counter ---- */
+.barshelf {
+  position: absolute;
+  left: 312px;
+  top: 216px;
+  width: 356px;
+  height: 20px;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  border-bottom: 2px solid var(--ink);
+  opacity: 0.75;
+}
+.barshelf i {
+  width: 5px;
+  height: 11px;
+  background: var(--ink);
+}
+.barshelf i.tall {
+  height: 17px;
+}
+/* The bartender works behind the counter. Position is driven in React (he slides between stops);
+   these rules animate what his hands are doing in each phase of the routine. */
+.bartender {
+  position: absolute;
+  left: 336px;
+  top: 220px;
+  width: 30px;
+  height: 28px;
+  pointer-events: none;
+}
+.bartender-body {
+  position: relative;
+}
+/* The glasses and pour stream only appear when he's actually using them. */
+.bartender .glasses {
+  opacity: 0;
+}
+.bartender.phase-pour .glasses,
+.bartender.phase-shake .glasses,
+.bartender.phase-flair .glasses {
+  opacity: 1;
+}
+.bartender .pourStream {
+  opacity: 0;
+}
+
+/* shake — the shaker rattles up and down */
+.bartender.phase-shake .shakeArm {
+  transform-origin: 16px 14px;
+  animation: barShake 0.26s steps(2) infinite;
+}
+@keyframes barShake {
+  0%   { transform: rotate(-18deg) translateY(0); }
+  100% { transform: rotate(8deg) translateY(-3px); }
+}
+
+/* pour — tip the shaker over the glasses, stream running */
+.bartender.phase-pour .shakeArm {
+  transform-origin: 16px 14px;
+  animation: barPour 1.9s ease-in-out forwards;
+}
+@keyframes barPour {
+  0%   { transform: rotate(0deg) translateX(0); }
+  25%  { transform: rotate(58deg) translateX(5px); }
+  80%  { transform: rotate(58deg) translateX(5px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+.bartender.phase-pour .pourStream {
+  animation: barStream 1.9s steps(1) forwards;
+}
+@keyframes barStream {
+  0%, 20%   { opacity: 0; }
+  25%, 78%  { opacity: 1; }
+  85%, 100% { opacity: 0; }
+}
+
+/* flair — toss the shaker up, spin it, catch it */
+.bartender.phase-flair .shaker {
+  transform-origin: 17px 9px;
+  animation: barToss 1.9s ease-in-out infinite;
+}
+@keyframes barToss {
+  0%   { transform: translateY(0) rotate(0deg); }
+  35%  { transform: translateY(-13px) rotate(180deg); }
+  55%  { transform: translateY(-15px) rotate(360deg); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+.bartender.phase-flair .shakeArm {
+  transform-origin: 16px 14px;
+  animation: barCatch 1.9s ease-in-out infinite;
+}
+@keyframes barCatch {
+  0%, 100% { transform: rotate(0deg); }
+  45%      { transform: rotate(-26deg); }
+}
+
+/* wipe — the other hand polishes the counter */
+.bartender.phase-wipe .wipeArm {
+  transform-origin: 4px 12px;
+  animation: barWipe 0.6s ease-in-out infinite alternate;
+}
+@keyframes barWipe {
+  0%   { transform: translateX(-1px) rotate(6deg); }
+  100% { transform: translateX(5px) rotate(30deg); }
+}
+
+/* The counter sits in front of the bartender, so their lower half is hidden behind it. */
+.barcounter {
+  position: absolute;
+  left: 306px;
+  top: 240px;
+  width: 368px;
+  height: 16px;
+  pointer-events: none;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  background-image: repeating-linear-gradient(90deg, var(--dot) 0 2px, transparent 2px 10px);
+  box-shadow: 3px 3px 0 var(--sh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.barcounter-label {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.22em;
+  background: var(--panel);
+  padding: 0 4px;
+}
+
 /* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */
 .prop {
   position: absolute;

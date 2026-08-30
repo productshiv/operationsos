@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { Desk } from './desks';
 import { AGENTS } from '../lib/agents';
 import { AgentChat } from '../agents/AgentChat';
+import { callEveryone, endParty, useParty } from '../state/party';
 
 /**
  * The window that opens when you interact with a desk. Live agents (those with a config) get a
@@ -28,6 +29,7 @@ export function DeskWindow({
 
   const agent = desk.kind === 'agent' ? AGENTS[desk.id] : undefined;
   const title = desk.kind === 'door' ? 'LOCKED' : desk.name || desk.plate;
+  const party = useParty();
 
   return (
     <div className="scrim on" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -39,6 +41,34 @@ export function DeskWindow({
         <div className="wbody">
           {agent ? (
             <AgentChat agent={agent} jira={jira} agentModel={agentModel} />
+          ) : desk.kind === 'hr' ? (
+            <div className="hrcall">
+              <p>
+                <b>HR room.</b>{' '}
+                {party.phase === 'off'
+                  ? 'Call everyone over for a floor party — the team downs tools and heads to the dance floor.'
+                  : party.phase === 'gathering'
+                    ? 'Calling everyone over…'
+                    : 'The bar is open. Music’s from your jukebox playlist.'}
+              </p>
+              <div className="fixrow">
+                {party.phase === 'off' ? (
+                  <button
+                    className="btn go"
+                    onClick={() => {
+                      callEveryone();
+                      onClose();
+                    }}
+                  >
+                    🎉 Call everyone
+                  </button>
+                ) : (
+                  <button className="btn" onClick={() => { endParty(); onClose(); }}>
+                    Back to work
+                  </button>
+                )}
+              </div>
+            </div>
           ) : desk.kind === 'door' ? (
             <p>
               <b>{desk.plate.split(' ')[0]}</b> comes online in a later update. The desk is wired — the

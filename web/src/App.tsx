@@ -40,7 +40,7 @@ export default function App() {
   return (
     <div className="app">
       <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} jukebox={jukebox} />
-      <Office jira={jira} agentModel={agentModel.model} />
+      <Office jira={jira} agentModel={agentModel.model} jukebox={jukebox} />
       <MusicEngine jb={jukebox} />
       <Ticker />
       {jukebox.open && <JukeboxModal jb={jukebox} onClose={() => jukebox.setOpen(false)} />}

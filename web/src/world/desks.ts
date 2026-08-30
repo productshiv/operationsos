@@ -1,7 +1,7 @@
 export const WORLD_W = 980;
 export const WORLD_H = 580;
 
-export type DeskKind = 'agent' | 'inbox' | 'door';
+export type DeskKind = 'agent' | 'inbox' | 'door' | 'hr';
 export type Activity = 'bars' | 'cursor';
 
 export interface Desk {
@@ -31,4 +31,19 @@ export const DESKS: Desk[] = [
   { id: 'inbox', name: 'INBOX', plate: 'YOUR BOX', x: 64, y: 430, w: 170, h: 110, kind: 'inbox' },
   { id: 'sales', name: '', plate: 'SALES · v2', x: 300, y: 452, w: 120, h: 74, kind: 'door' },
   { id: 'pm', name: '', plate: 'PM · v2', x: 470, y: 452, w: 120, h: 74, kind: 'door' },
+  { id: 'hr', name: 'HR', plate: 'HR ROOM', x: 66, y: 250, w: 150, h: 96, kind: 'hr' },
+];
+
+/**
+ * Where everyone stands when the CEO calls a floor party. The rug is the dance floor; these sit below
+ * the bar (which runs along its top, y≈216–256) and leave room for the shared step routine, which
+ * travels ±20px horizontally.
+ */
+export const DANCE_SPOTS: Array<{ x: number; y: number }> = [
+  { x: 355, y: 288 },
+  { x: 435, y: 332 },
+  { x: 510, y: 288 },
+  { x: 590, y: 332 },
+  { x: 395, y: 366 },
+  { x: 550, y: 366 },
 ];
