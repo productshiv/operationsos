@@ -137,6 +137,9 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const toolResultRef = useRef<Map<string, string>>(new Map());
   const counterRef = useRef(0);
   const lastUserRef = useRef<string>('');
+  // orderRef length at the start of the current turn's assistant output — so a failed turn's
+  // partial text and half-run tool cards can be dropped instead of lingering next to a retry.
+  const turnStartRef = useRef(0);
 
   const rebuild = useCallback(() => {
     const out: ChatItem[] = [];
@@ -187,6 +190,12 @@ export function useAgentChat(spec: Record<string, unknown>) {
     rebuild();
   }
 
+  /** Drop the assistant output produced by the current (failed) turn, keeping the user's message. */
+  function truncateTurn() {
+    const removed = orderRef.current.splice(turnStartRef.current);
+    for (const key of removed) basesRef.current.delete(key);
+  }
+
   function handle(ev: StreamEvent) {
     switch (ev.type) {
       case 'model.message':
@@ -229,6 +238,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
         // configured). Turn a missing-connector failure into a fix-it CTA; surface anything else.
         if (ev.state?.status === 'error') {
           const msg = ev.state.message ?? 'The turn failed.';
+          truncateTurn(); // drop partial text / still-"running" tools from the failed attempt
           const missing = detectMissingConnector(msg);
           if (missing) setNeedsConnector(missing);
           else setTurnError(friendlyError(msg));
@@ -249,6 +259,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
       setBusy(true);
       setNeedsConnector(null);
       setTurnError(null);
+      turnStartRef.current = orderRef.current.length; // assistant output for this turn starts here
       try {
         if (!sessionRef.current) {
           const created = await trueforge.sessions.create({ agent: { spec } } as never);
@@ -260,6 +271,8 @@ export function useAgentChat(spec: Record<string, unknown>) {
         await consume(stream as never);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);
+        truncateTurn(); // drop any partial output from the failed attempt
+        rebuild();
         const missing = detectMissingConnector(msg);
         if (missing) setNeedsConnector(missing);
         else setTurnError(friendlyError(msg));
@@ -267,7 +280,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
         setBusy(false);
       }
     },
-    [spec],
+    [spec, rebuild],
   );
 
   const send = useCallback(

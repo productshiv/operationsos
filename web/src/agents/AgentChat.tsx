@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
-import { addCatalogConnector, authorizeConnector, listCatalog } from '../lib/connectors';
+import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
 import type { AgentConfig } from '../lib/agents';
 
 /** Strip minimax's internal reasoning tags (`<mm:think>…</mm:think>`) — including an unclosed one
@@ -66,12 +66,28 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
   const [draft, setDraft] = useState('');
   const [fixing, setFixing] = useState(false);
   const [fixErr, setFixErr] = useState<string | null>(null);
+  // The catalog entry for the missing connector (prefetched), so we know whether a one-click add is
+  // possible (no-auth) or it needs credentials/OAuth that only the Integrations panel collects.
+  const [entry, setEntry] = useState<CatalogConnector | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const l = logRef.current;
     if (l) l.scrollTop = l.scrollHeight;
-  }, [items, pending, busy, needsConnector]);
+  }, [items, pending, busy, needsConnector, turnError]);
+
+  useEffect(() => {
+    setFixErr(null);
+    if (!needsConnector) {
+      setEntry(null);
+      return;
+    }
+    let cancelled = false;
+    void listCatalog().then((cat) => {
+      if (!cancelled) setEntry(cat.find((c) => c.name === needsConnector) ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [needsConnector]);
 
   const submit = (text: string) => {
     const t = text.trim();
@@ -80,26 +96,14 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
     void send(t);
   };
 
-  // Add the connector the agent needs (from the catalog), then re-run the message so it continues.
+  // Only no-auth connectors can be added in one click; header/OAuth ones need credentials the
+  // Integrations panel collects properly, so those route there and the CEO retries afterwards.
   const addAndContinue = async () => {
-    if (!needsConnector) return;
+    if (!entry || entry.authType !== 'none') return;
     setFixing(true);
     setFixErr(null);
     try {
-      const entry = (await listCatalog()).find((c) => c.name === needsConnector);
-      if (!entry) {
-        setFixErr(`“${needsConnector}” isn’t in the catalog — add it in Integrations, then send again.`);
-        return;
-      }
       await addCatalogConnector(entry);
-      if (entry.authType !== 'none') {
-        // OAuth / key needed — kick off auth in a tab; the CEO finishes it, then sends again.
-        const { authorizationUrl } = await authorizeConnector(entry.name);
-        if (authorizationUrl) window.open(authorizationUrl, '_blank');
-        clearNeedsConnector();
-        setFixErr(`Connect “${needsConnector}” in the new tab, then send your message again.`);
-        return;
-      }
       await retry();
     } catch {
       setFixErr('Couldn’t add it — try again, or add it in Integrations.');
@@ -134,8 +138,14 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           </div>
         ))}
 
-        {/* One-click follow-up actions, offered once the agent has replied and is idle. */}
-        {agent.quickActions?.length && !busy && !pending && items.some((it) => it.role === 'assistant') ? (
+        {/* Follow-up actions, only when the latest reply actually succeeded — never next to an error
+            or a connector-recovery prompt, so they can't act on a stale, unrelated reply. */}
+        {agent.quickActions?.length &&
+        !busy &&
+        !pending &&
+        !turnError &&
+        !needsConnector &&
+        items[items.length - 1]?.role === 'assistant' ? (
           <div className="quickacts">
             {agent.quickActions.map((a) => (
               <button key={a.label} className="qact" onClick={() => submit(a.prompt)}>
@@ -161,11 +171,20 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           <div className="fixcard">
             <p>
               <b>{agent.name}</b> needs the <code>{needsConnector}</code> tool, which isn’t connected yet.
+              {entry && entry.authType !== 'none' && (
+                <> It needs {entry.authType === 'header' ? 'an API key' : 'sign-in'} — add it in{' '}
+                <b>Integrations</b> (top bar), then Try again.</>
+              )}
+              {entry === null && <> Add it in <b>Integrations</b> (top bar), then Try again.</>}
             </p>
             <div className="fixrow">
-              <button className="btn go" onClick={() => void addAndContinue()} disabled={fixing}>
-                {fixing ? 'Adding…' : `＋ Add ${needsConnector} & continue`}
-              </button>
+              {entry?.authType === 'none' ? (
+                <button className="btn go" onClick={() => void addAndContinue()} disabled={fixing}>
+                  {fixing ? 'Adding…' : `＋ Add ${needsConnector} & continue`}
+                </button>
+              ) : (
+                <button className="btn go" onClick={() => void retry()}>Try again</button>
+              )}
               <button className="btn" onClick={clearNeedsConnector} disabled={fixing}>Dismiss</button>
             </div>
             {fixErr && <div className="apwarn">{fixErr}</div>}
