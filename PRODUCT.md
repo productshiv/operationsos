@@ -36,7 +36,7 @@ before it does something you can't undo. OperationsOS is that supervised layer.
 Tool surfaces (via MCP): BI tool, database, ticketing, support platform, CRM, Grafana/analytics,
 project management, web search.
 
-## Core loop (the flagship flow we demo)
+## Core loop (the flagship flow)
 A customer is silently churning → the **Analyst** detects a usage anomaly (sandbox) → the
 **Handler** delegates to **Scout/Watch/Medic** to build a health dossier → Handler proposes a save
 (email + ticket + CRM update) → **the actions stop for the CEO to authorise** → on approval, the
@@ -64,7 +64,7 @@ CEO's inbox as an authorisation dossier (Authorise / Deny). Mode: **Operate**, p
 
 ## Constraints
 - Now: a single self-contained interactive HTML mock (north-star; re-implemented in React later).
-- Demo-safe: outward actions routed to sandbox/demo sinks; nothing irreversible fires without the human.
+- Safe by construction: nothing irreversible fires without the human at the approval gate.
 - Two themes: daytime office (light) and night-shift (dark).
 
 ## Named / not-to-touch

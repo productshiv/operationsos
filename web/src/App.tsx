@@ -4,6 +4,7 @@ import { Ticker } from './components/Ticker';
 import { Office } from './world/Office';
 import { MusicEngine, JukeboxModal } from './music/MusicPlayer';
 import { Setup } from './setup/Setup';
+import { InfoPanel, type InfoKind } from './components/InfoPanel';
 import { useHarnessStatus } from './lib/useHarnessStatus';
 import { useConnectors } from './state/useConnectors';
 import { useModels } from './state/useModels';
@@ -19,6 +20,7 @@ export default function App() {
   const agentModel = useAgentModel();
   const jukebox = useJukebox();
   const [setupOpen, setSetupOpen] = useState(false);
+  const [info, setInfo] = useState<InfoKind | null>(null);
 
   // Nag when something actually needs doing. The model check is for the *exact* model agents run on
   // (the chosen default) — an unrelated provider doesn't make agents runnable — and a failure to
@@ -39,11 +41,12 @@ export default function App() {
 
   return (
     <div className="app">
-      <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} jukebox={jukebox} />
+      <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} onInfo={setInfo} jukebox={jukebox} />
       <Office jira={jira} agentModel={agentModel.model} jukebox={jukebox} />
       <MusicEngine jb={jukebox} />
       <Ticker />
       {jukebox.open && <JukeboxModal jb={jukebox} onClose={() => jukebox.setOpen(false)} />}
+      {info && <InfoPanel kind={info} onClose={() => setInfo(null)} />}
       {setupOpen && (
         <Setup
           connectors={connectors}
