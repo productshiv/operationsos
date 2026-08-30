@@ -823,7 +823,8 @@ code {
 
 /* ---------------- AGENT CHAT ---------------- */
 .win.chatwin {
-  height: min(600px, 86%);
+  width: min(1120px, 94vw);
+  height: min(640px, 88%);
 }
 .win.chatwin .wbody {
   flex: 1 1 auto;
@@ -889,9 +890,31 @@ code {
 .toolhd {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  width: 100%;
   padding: 6px 8px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.toolhd:disabled {
+  cursor: default;
+}
+.toolhd:hover:not(:disabled) {
+  background: var(--panel);
+}
+.toolchev {
+  font-size: 9px;
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+.toolhd .tok {
+  margin-left: auto;
+}
+.toolcard.open .toolhd {
   border-bottom: 2px solid var(--ink);
 }
 .tok {
