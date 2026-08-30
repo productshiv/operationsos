@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { useModels } from '../state/useModels';
 import { AGENT_MODEL } from '../lib/agents';
-import { connectorLabel, HIDDEN_CONNECTORS } from '../lib/connectors';
 import type { CatalogConnector, Connector, ConnectorAuthKind } from '../lib/connectors';
 import type { ModelRef } from '../lib/models';
 
@@ -197,10 +196,10 @@ function ProviderForm({
 
 function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useConnectors> }) {
   const [custom, setCustom] = useState(false);
-  const { connectors: list, connectState, connect, disconnect, catalog, catalogState, addFromCatalog } = connectors;
+  const { connectors: list, connectState, connect, disconnect, catalog, catalogState, addFromCatalog, hidden, label } = connectors;
   // Hide undeletable dead connectors from the list, but keep them in `configured` so the catalog
   // still won't re-offer them (they do exist on the harness).
-  const visible = list.filter((c) => !HIDDEN_CONNECTORS.has(c.name));
+  const visible = list.filter((c) => !hidden.has(c.name));
   const authed = visible.filter((c) => c.status !== 'auth_required').length;
   const configured = new Set(list.map((c) => c.name));
   const available = catalog.filter((c) => !configured.has(c.name));
@@ -230,6 +229,7 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
                 <ConnectorRow
                   key={c.name}
                   connector={c}
+                  label={label(c.name)}
                   state={connectState[c.name] ?? 'idle'}
                   onConnect={(win) => void connect(c.name, win)}
                   onDisconnect={() => void disconnect(c.name)}
@@ -351,11 +351,13 @@ function ConnectorLogo({ entry }: { entry: CatalogConnector }) {
 
 function ConnectorRow({
   connector,
+  label,
   state,
   onConnect,
   onDisconnect,
 }: {
   connector: Connector;
+  label: string;
   state: ConnectState;
   onConnect: (popup: Window | null) => void;
   onDisconnect: () => void;
@@ -368,7 +370,7 @@ function ConnectorRow({
   return (
     <div className="conn">
       <div className="conn-id">
-        <div className="conn-name">{connectorLabel(connector.name)}</div>
+        <div className="conn-name">{label}</div>
         <div className="conn-url dim">{connector.url}</div>
         {state === 'error' && (
           <div className="conn-err">Something went wrong — retry.</div>

@@ -23,7 +23,8 @@ export default function App() {
   const needsAttention =
     connectors.offline ||
     models.offline ||
-    connectors.connectors.some((c) => c.status === 'auth_required') ||
+    // Ignore hidden connectors (e.g. an undeletable dead one) — no row exists for the user to fix.
+    connectors.connectors.some((c) => !connectors.hidden.has(c.name) && c.status === 'auth_required') ||
     missingModel;
 
   return (
