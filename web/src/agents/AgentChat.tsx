@@ -5,6 +5,11 @@ import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
 import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
 import { buildAgentSpec, type AgentConfig } from '../lib/agents';
 
+/** The reply flags something worth a ticket — so "Open a ticket" is offered contextually, not after
+ *  every message. Matches escalation language, warnings, and problems an agent would want tracked. */
+const TICKETABLE =
+  /⚠|\b(ticket|jira|escalat|advisor|incident|outage|breach|vulnerab|security|exposed|at[-\s]?risk|churn|remediat|recommend|should (?:we|i|you)|flag(?:ged)?|disabled|misconfigur|failing|error spike|needs? (?:fixing|attention|action)|follow[-\s]?up)\b/i;
+
 /** Strip minimax's internal reasoning tags (`<mm:think>…</mm:think>`) — including an unclosed one
  *  mid-stream — so they never leak into the visible reply. */
 function stripThink(text: string): string {
@@ -76,12 +81,15 @@ export function AgentChat({
   const {
     items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration, newChat,
     sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError,
-  } = useAgentChat(spec);
+  } = useAgentChat(spec, agent.id);
   const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so
   // it never targets a session that can't invoke it (e.g. Jira was added after the session started).
   // Before the first turn, fall back to the currently-resolved connector.
   const canTicket = jira != null && (sessionServers ? sessionServers.includes(jira) : true);
+  // Offer "Open a ticket" only when the latest reply actually flags something escalation-worthy.
+  const lastItem = items[items.length - 1];
+  const suggestsTicket = lastItem?.role === 'assistant' && TICKETABLE.test(lastItem.text);
   const [draft, setDraft] = useState('');
   const [fixing, setFixing] = useState(false);
   const [fixErr, setFixErr] = useState<string | null>(null);
@@ -180,11 +188,12 @@ export function AgentChat({
             action is gated on a Jira connector actually being available. */}
         {agent.quickActions?.length &&
         canTicket &&
+        suggestsTicket &&
         !busy &&
         !pending &&
         !turnError &&
         !needsConnector &&
-        items[items.length - 1]?.role === 'assistant' ? (
+        lastItem?.role === 'assistant' ? (
           <div className="quickacts">
             {agent.quickActions.map((a) => (
               <button key={a.label} className="qact" onClick={() => submit(a.prompt)}>

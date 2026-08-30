@@ -7,8 +7,10 @@ import { Roamers } from './Roamers';
 import { Ceo } from './Ceo';
 import { TouchPad } from './TouchPad';
 import { DeskWindow } from './DeskWindow';
+import { AttentionPanel } from './AttentionPanel';
 import { useCamera } from './useCamera';
 import { useCeo } from './useCeo';
+import { useAttention } from '../state/tasks';
 
 /**
  * The walkable floor. The world is a fixed-size plane scaled to fit the viewport; the CEO moves
@@ -20,6 +22,8 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
   const worldRef = useRef<HTMLDivElement>(null);
   const ceoRef = useRef<HTMLDivElement>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const attention = useAttention();
 
   useCamera(viewportRef, worldRef);
   const { nearId, press, release } = useCeo(ceoRef, setOpenId);
@@ -40,7 +44,7 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
         {DESKS.map((desk) => (
           <Desk key={desk.id} desk={desk} onOpen={setOpenId} />
         ))}
-        <Ceo ref={ceoRef} />
+        <Ceo ref={ceoRef} attention={attention.length} onAttention={() => setBoardOpen(true)} />
         {near && (
           <div className="prompt on" style={{ left: near.x + near.w / 2, top: near.y - 6 }}>
             <span className="k">E</span>
@@ -57,6 +61,16 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
 
       {open && (
         <DeskWindow desk={open} jira={jira} agentModel={agentModel} onClose={() => setOpenId(null)} />
+      )}
+
+      {boardOpen && (
+        <AttentionPanel
+          onClose={() => setBoardOpen(false)}
+          onGoto={(id) => {
+            setBoardOpen(false);
+            setOpenId(id);
+          }}
+        />
       )}
     </div>
   );

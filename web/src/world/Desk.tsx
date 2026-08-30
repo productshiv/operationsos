@@ -1,5 +1,6 @@
 import type { Desk as DeskData } from './desks';
 import { AgentSprite } from './AgentSprite';
+import { useOpenTaskCount } from '../state/tasks';
 
 interface DeskProps {
   desk: DeskData;
@@ -9,6 +10,8 @@ interface DeskProps {
 /** A workstation on the floor: an agent desk, your Inbox, or a locked (roadmap) door. */
 export function Desk({ desk, onOpen }: DeskProps) {
   const style = { left: desk.x, top: desk.y, width: desk.w };
+  // Active tasks routed to this agent — shown as a number badge (their workload to check on).
+  const tasks = useOpenTaskCount(desk.id);
 
   if (desk.kind === 'door') {
     return (
@@ -54,13 +57,12 @@ export function Desk({ desk, onOpen }: DeskProps) {
       <div className="seat">
         <AgentSprite />
         <div className="plate">{desk.plate}</div>
-        {desk.flag && (
-          <div className="flag">
-            <div className="pole" />
-            <div className="pn" />
-          </div>
-        )}
       </div>
+      {tasks > 0 && (
+        <div className="deskbadge" title={`${tasks} active task${tasks === 1 ? '' : 's'}`}>
+          {tasks}
+        </div>
+      )}
     </div>
   );
 }
