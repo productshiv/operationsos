@@ -18,7 +18,17 @@ import { findAgentSession } from './sessionHistory';
 export type ConsultResult =
   | { kind: 'answer'; text: string }
   | { kind: 'needs-approval'; tool: string }
+  /** The colleague asked a clarifying question — only the CEO can answer it, at their desk. */
+  | { kind: 'needs-input' }
+  /** Their session already has a checkpoint waiting on the CEO, so it can't take a question yet. */
+  | { kind: 'blocked' }
   | { kind: 'error'; message: string };
+
+/**
+ * Colleagues currently mid-consult. A session accepts one turn at a time, so overlapping turns would
+ * be rejected or interleave — this keeps consultations one-at-a-time per colleague.
+ */
+const inFlight = new Set<string>();
 
 interface Ev {
   type: string;
@@ -50,6 +60,11 @@ export async function consultAgent(opts: {
   const agent = AGENTS[opts.agentId];
   if (!agent) return { kind: 'error', message: `No such colleague: ${opts.agentId}` };
 
+  if (inFlight.has(opts.agentId)) {
+    return { kind: 'error', message: `${agent.name} is already answering another question — try again in a moment.` };
+  }
+  inFlight.add(opts.agentId);
+
   try {
     const spec = buildAgentSpec(agent, opts.jira, opts.model);
     const instructions = typeof spec.instructions === 'string' ? spec.instructions : '';
@@ -58,10 +73,16 @@ export async function consultAgent(opts: {
       : [];
 
     // Continue their existing thread when there is one; otherwise open a fresh session for them.
-    let sessionId: string | null = null;
+    // A lookup *failure* is not "no session": creating one then would fork their conversation and
+    // lose their context, so we surface it instead.
     const look = await findAgentSession(instructions, opts.model, servers);
-    if (look.status === 'found') sessionId = look.session.id;
-    if (!sessionId) {
+    if (look.status === 'error') {
+      return { kind: 'error', message: `Couldn't reach ${agent.name}'s conversation — try again.` };
+    }
+    let sessionId: string;
+    if (look.status === 'found') {
+      sessionId = look.session.id;
+    } else {
       const created = await trueforge.sessions.create({ agent: { spec } } as never);
       sessionId = (created as { data: { id: string } }).data.id;
     }
@@ -70,33 +91,53 @@ export async function consultAgent(opts: {
       input: [{ type: 'user.message', content: opts.question }],
     });
 
-    let text = '';
+    // Accumulate the same way the chat's own consumer does: `model.message` is the message base and
+    // `model.message.delta` appends to it. Adding both would duplicate the reply.
+    const parts = new Map<string, string>();
+    const order: string[] = [];
     let pendingTool: string | null = null;
+    let askedQuestion = false;
     let failure: string | null = null;
     const toolNames = new Map<string, string>();
 
     for await (const { data } of (stream as unknown as { withMetadata(): AsyncIterable<{ data: Ev }> }).withMetadata()) {
       const ev = data;
       if ((ev.threadId ?? 'main') !== 'main') continue;
-      if (ev.type === 'model.message' || ev.type === 'model.message.delta') {
-        if (typeof ev.content === 'string') text += ev.content;
-        for (const tc of ev.toolCalls ?? []) if (tc.id && tc.function?.name) toolNames.set(tc.id, tc.function.name);
+      for (const tc of ev.toolCalls ?? []) if (tc.id && tc.function?.name) toolNames.set(tc.id, tc.function.name);
+
+      if (ev.type === 'model.message' && ev.id) {
+        if (!parts.has(ev.id)) order.push(ev.id);
+        parts.set(ev.id, typeof ev.content === 'string' ? ev.content : '');
+      } else if (ev.type === 'model.message.delta' && ev.id) {
+        if (!parts.has(ev.id)) order.push(ev.id);
+        if (typeof ev.content === 'string') parts.set(ev.id, (parts.get(ev.id) ?? '') + ev.content);
       } else if (ev.type === 'tool.approval_required') {
         const ref = (ev.toolCalls ?? [])[0];
         pendingTool = (ref?.id && toolNames.get(ref.id)) || 'a tool';
+      } else if (ev.type === 'tool.response_required') {
+        // They asked a clarifying question. Their session is now paused on it — only the CEO can
+        // answer, at their desk. Reporting it keeps later consultations from hitting a 422.
+        askedQuestion = true;
       } else if (ev.type === 'turn.done' && ev.state?.status === 'error') {
         failure = ev.state.message ?? 'the turn failed';
       }
     }
 
     if (failure) return { kind: 'error', message: failure };
-    // A pause outranks a partial answer: without the sign-off they haven't actually answered.
+    // A pause outranks a partial answer: without the sign-off or the answer they haven't finished.
     if (pendingTool) return { kind: 'needs-approval', tool: pendingTool };
-    const answer = stripThink(text);
+    if (askedQuestion) return { kind: 'needs-input' };
+    const answer = stripThink(order.map((id) => parts.get(id) ?? '').join(''));
     return answer
       ? { kind: 'answer', text: answer }
       : { kind: 'error', message: `${agent.name} had nothing to add.` };
   } catch (e) {
-    return { kind: 'error', message: (e as Error).message ?? String(e) };
+    const message = (e as Error).message ?? String(e);
+    // The harness refuses a new message while that session is paused on an approval or a question.
+    // That's not a failure to report raw — it means their desk needs the CEO first.
+    if (/approvals or questions are pending/i.test(message)) return { kind: 'blocked' };
+    return { kind: 'error', message };
+  } finally {
+    inFlight.delete(opts.agentId);
   }
 }

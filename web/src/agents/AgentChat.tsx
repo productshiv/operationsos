@@ -165,6 +165,11 @@ export function AgentChat({
     setAsking(null);
     if (res.kind === 'answer') {
       void send(`I asked the ${name}. They said:\n\n${res.text}\n\nUse that to answer my question.`);
+    } else if (res.kind === 'blocked') {
+      setAttention(id, 'a pending checkpoint');
+      setConsultNote(`${name} already has something waiting on your sign-off — open their desk to clear it, then ask again.`);
+    } else if (res.kind === 'needs-input') {
+      setConsultNote(`${name} asked a clarifying question before they can answer — open their desk to reply.`);
     } else if (res.kind === 'needs-approval') {
       // They can't answer without a sign-off — put it on the board rather than failing quietly.
       setAttention(id, res.tool);

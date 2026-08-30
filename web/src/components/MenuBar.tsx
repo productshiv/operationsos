@@ -50,10 +50,10 @@ export function MenuBar({
       <JukeboxWidget jb={jukebox} />
       <div className="spread">
         {/* How the system fits together, and where it's going — reference, always one click away. */}
-        <button className="m m-btn" onClick={() => onInfo?.('architecture')} title="How OperationsOS works">
+        <button className="m m-btn m-ref" onClick={() => onInfo?.('architecture')} title="How OperationsOS works">
           architecture
         </button>
-        <button className="m m-btn" onClick={() => onInfo?.('roadmap')} title="What's shipped and what's next">
+        <button className="m m-btn m-ref" onClick={() => onInfo?.('roadmap')} title="What's shipped and what's next">
           roadmap
         </button>
         <span className={`hstatus hstatus--${conn}`}>harness: {conn}</span>

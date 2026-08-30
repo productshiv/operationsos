@@ -2309,3 +2309,11 @@ code {
   opacity: 0.75;
   margin-right: 2px;
 }
+
+/* The architecture/roadmap buttons are reference, not core controls — drop them before the header
+   runs out of room on narrow screens (it doesn't wrap or scroll). */
+@media (max-width: 1180px) {
+  .menubar .m-btn.m-ref {
+    display: none;
+  }
+}
