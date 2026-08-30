@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useJukebox } from '../state/useJukebox';
+import type { useJukebox } from '../state/useJukebox';
+
+/** Shared jukebox handle passed to the engine, the menu-bar widget, and the modal. */
+export type Jukebox = ReturnType<typeof useJukebox>;
 
 /* ------- Minimal typings for the bits of the YouTube IFrame API we drive ------- */
 interface YTPlayer {
@@ -38,14 +41,12 @@ function loadYouTubeApi(): Promise<void> {
 }
 
 /**
- * The floor jukebox: a small 1-bit player in the centre of the office, a modal to manage the
- * playlist (paste YouTube links, saved per device), and an offscreen YouTube player that is the
- * actual audio engine. It uses the official IFrame API so commands wait for real player readiness
- * (no fixed-delay races), a paused load is cued rather than autoplayed, and a finished track
- * advances the playlist.
+ * The offscreen YouTube audio engine. Mounted at app level (not inside the menu bar) so playback
+ * isn't scoped to a small positioned ancestor. It uses the official IFrame API so commands wait for
+ * real player readiness (no fixed-delay races), a paused load is cued rather than autoplayed, and a
+ * finished track advances the playlist.
  */
-export function MusicPlayer() {
-  const jb = useJukebox();
+export function MusicEngine({ jb }: { jb: Jukebox }) {
   // Stable handle to the latest hook value for use inside the player's event callbacks.
   const jbRef = useRef(jb);
   jbRef.current = jb;
@@ -106,31 +107,30 @@ export function MusicPlayer() {
     else p.pauseVideo();
   }, [ready, jb.playing, videoId]);
 
+  return armed ? <div ref={hostRef} className="jukebox-engine" /> : null;
+}
+
+/** The clickable player — designed to sit in the centre of the menu bar. */
+export function JukeboxWidget({ jb }: { jb: Jukebox }) {
   return (
-    <>
-      {armed && <div ref={hostRef} className="jukebox-engine" />}
-
-      <div className="jukebox">
-        <button
-          className="jb-toggle"
-          onClick={jb.toggle}
-          disabled={jb.tracks.length === 0}
-          aria-label={jb.playing ? 'Pause' : 'Play'}
-        >
-          {jb.playing ? '❚❚' : '▶'}
-        </button>
-        <button className="jb-open" onClick={() => jb.setOpen(true)} aria-label="Open jukebox">
-          <span className={`jb-eq${jb.playing ? ' on' : ''}`} aria-hidden="true"><i /><i /><i /><i /></span>
-          <span className="jb-label">{jb.current ? jb.current.videoId : 'add music'}</span>
-        </button>
-      </div>
-
-      {jb.open && <JukeboxModal jb={jb} onClose={() => jb.setOpen(false)} />}
-    </>
+    <div className="jukebox">
+      <button
+        className="jb-toggle"
+        onClick={jb.toggle}
+        disabled={jb.tracks.length === 0}
+        aria-label={jb.playing ? 'Pause' : 'Play'}
+      >
+        {jb.playing ? '❚❚' : '▶'}
+      </button>
+      <button className="jb-open" onClick={() => jb.setOpen(true)} aria-label="Open jukebox">
+        <span className={`jb-eq${jb.playing ? ' on' : ''}`} aria-hidden="true"><i /><i /><i /><i /></span>
+        <span className="jb-label">{jb.current ? jb.current.title ?? jb.current.videoId : 'add music'}</span>
+      </button>
+    </div>
   );
 }
 
-function JukeboxModal({ jb, onClose }: { jb: ReturnType<typeof useJukebox>; onClose: () => void }) {
+export function JukeboxModal({ jb, onClose }: { jb: Jukebox; onClose: () => void }) {
   const [url, setUrl] = useState('');
   const [err, setErr] = useState(false);
 
@@ -174,7 +174,7 @@ function JukeboxModal({ jb, onClose }: { jb: ReturnType<typeof useJukebox>; onCl
                     >
                       {cur && jb.playing ? '❚❚' : '▶'}
                     </button>
-                    <span className="jb-vid">{t.videoId}</span>
+                    <span className="jb-vid">{t.title ?? t.videoId}</span>
                     <button className="jb-x" onClick={() => jb.remove(t.id)} aria-label="Remove">×</button>
                   </div>
                 );

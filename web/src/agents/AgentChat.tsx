@@ -1,6 +1,48 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAgentChat } from '../state/useAgentChat';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
 import type { AgentConfig } from '../lib/agents';
+
+/** Assistant replies are markdown; render them (links open safely in a new tab). */
+function Markdown({ text }: { text: string }) {
+  return (
+    <div className="mtext md">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/** One tool call in the thread — collapsed to a one-line header by default, expandable for detail. */
+function ToolCard({ tool }: { tool: ToolActivity }) {
+  const [open, setOpen] = useState(false);
+  const hasDetail = !!(tool.query || tool.result);
+  return (
+    <div className={`toolcard${open ? ' open' : ''}`}>
+      <button
+        className="toolhd"
+        onClick={() => hasDetail && setOpen((o) => !o)}
+        disabled={!hasDetail}
+        aria-expanded={open}
+      >
+        {hasDetail && <span className="toolchev" aria-hidden="true">{open ? '▾' : '▸'}</span>}
+        <span className="tag8">{tool.server ? `${tool.server} · ${tool.tool}` : tool.tool}</span>
+        <span className={tool.result ? 'tok ok' : 'tok'}>{tool.result ? 'done' : 'running…'}</span>
+      </button>
+      {open && (
+        <div className="toolbody">
+          {tool.query && <pre className="sql">{tool.query}</pre>}
+          {tool.result && <div className="toolres">{tool.result.slice(0, 400)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * A live conversation with an agent: streams the turn, shows the tools it runs (with the SQL),
@@ -42,16 +84,11 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           <div key={it.key} className={`msg ${it.role === 'user' ? 'me' : 'ag'}`}>
             {it.role === 'assistant' && <div className="who">{agent.name}</div>}
             {it.tools.map((t) => (
-              <div key={t.id} className="toolcard">
-                <div className="toolhd">
-                  <span className="tag8">{t.server ? t.server + ' · ' + t.tool : t.tool}</span>
-                  <span className={t.result ? 'tok ok' : 'tok'}>{t.result ? 'done' : 'running…'}</span>
-                </div>
-                {t.query && <pre className="sql">{t.query}</pre>}
-                {t.result && <div className="toolres">{t.result.slice(0, 400)}</div>}
-              </div>
+              <ToolCard key={t.id} tool={t} />
             ))}
-            {it.text && <div className="mtext">{it.text}</div>}
+            {it.text && (it.role === 'assistant'
+              ? <Markdown text={it.text} />
+              : <div className="mtext">{it.text}</div>)}
           </div>
         ))}
 

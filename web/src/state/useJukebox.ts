@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   clearTracks,
   defaultTracks,
+  fetchTitle,
   loadTracks,
   makeTrack,
   saveTracks,
@@ -22,6 +23,19 @@ export function useJukebox() {
   // Persist every change to the playlist.
   useEffect(() => {
     saveTracks(tracks);
+  }, [tracks]);
+
+  // Backfill real titles via oEmbed for any track that lacks one (default, freshly added, or an
+  // older stored track). Each id is fetched at most once; failures leave the id showing.
+  const titled = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const t of tracks) {
+      if (t.title || titled.current.has(t.id)) continue;
+      titled.current.add(t.id);
+      void fetchTitle(t.videoId).then((title) => {
+        if (title) setTracks((ts) => ts.map((x) => (x.id === t.id ? { ...x, title } : x)));
+      });
+    }
   }, [tracks]);
 
   // Keep transport state consistent with the playlist: an empty playlist has nothing to play, and
