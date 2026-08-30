@@ -28,8 +28,8 @@ export interface AgentConfig {
 /** Data Analyst — reads the business database. Supabase only, so it never depends on other tools. */
 const dataAnalyst: AgentConfig = {
   id: 'analyst',
-  name: 'Analyst',
-  role: 'Data Analyst',
+  name: 'Data Analyst',
+  role: 'business database',
   blurb: 'Ask about customers, revenue, usage, or churn. I discover the schema and query it — and pause for your sign-off before any query runs.',
   spec: {
     model: { name: AGENT_MODEL },
@@ -60,8 +60,8 @@ const dataAnalyst: AgentConfig = {
 /** Market Research — researches companies, markets, and competitors on the web. */
 const research: AgentConfig = {
   id: 'scout',
-  name: 'Scout',
-  role: 'Market Research',
+  name: 'Market Research',
+  role: 'web research',
   blurb: 'Ask me to research a company, market, or competitor. I search the web and bring back a short, sourced summary.',
   spec: {
     model: { name: AGENT_MODEL },
@@ -82,13 +82,13 @@ const research: AgentConfig = {
 /** Support Desk — reads Jira and, on the CEO's sign-off, opens or updates tickets. */
 const support: AgentConfig = {
   id: 'medic',
-  name: 'Support',
-  role: 'Support Desk',
+  name: 'Support Lead',
+  role: 'Jira tickets',
   blurb: 'Ask about support tickets — I read Jira and summarise what customers are hitting. On your sign-off I can open or update a ticket.',
   spec: {
     model: { name: AGENT_MODEL },
     instructions: [
-      'You are the Support agent for a Weather API company. Ticketing is Jira — use the atlassian/Jira tools (discover their fields if unsure).',
+      'You are the Support Lead for a Weather API company. Ticketing is Jira — use the atlassian/Jira tools (discover their fields if unsure).',
       'Help summarise open tickets, spot what customers are hitting, and draft replies.',
       'When asked to open or file a ticket, draft it (a clear summary and a description) and then call the Jira create tool directly in that turn. The harness automatically pauses for the CEO to authorise before the issue is created, so create it rather than asking permission again in text.',
       'Be concise.',
@@ -113,8 +113,8 @@ const support: AgentConfig = {
 /** Incident Response — watches error spikes and quantifies incidents (read-only). */
 const incident: AgentConfig = {
   id: 'watch',
-  name: 'Watch',
-  role: 'Incident Response',
+  name: 'Incident Response',
+  role: 'error monitoring',
   blurb: 'Ask about errors and incidents. I read the error data (read-only), quantify what is happening, and name the likely cause.',
   spec: {
     model: { name: AGENT_MODEL },
@@ -137,21 +137,21 @@ const incident: AgentConfig = {
 };
 
 /**
- * Ops Coordinator — turns a situation into a routed plan. It has no MCP connector of its own (so it
+ * Operations Manager — turns a situation into a routed plan. It has no MCP connector of its own (so it
  * always runs) and it does not execute the work: it breaks a request into ordered steps and routes
  * each to the specialist who actually has the tools. It deliberately does NOT spawn sub-agents,
  * because dynamically created children inherit this agent's (empty) toolset and so couldn't act.
  */
 const coordinator: AgentConfig = {
   id: 'handler',
-  name: 'Handler',
-  role: 'Ops Coordinator',
+  name: 'Operations Manager',
+  role: 'planning & routing',
   blurb: 'Hand me a situation and I turn it into a plan — which specialist to ask for each step, and in what order. I route the work; the specialists run it.',
   spec: {
     model: { name: AGENT_MODEL },
     instructions: [
-      'You are the Ops Coordinator. You do NOT have direct access to the database, the web, or Jira — the specialists do, and you route work to them.',
-      'When the CEO hands you a situation, break it into a clear, ordered plan and assign each step to the right specialist by name: the Data Analyst (business numbers from the database), Market Research (companies, markets, and competitors on the web), Support (read or file Jira tickets), and Incident Response (error spikes and incidents). For each step, say what to ask that specialist and why.',
+      'You are the Operations Manager. You do NOT have direct access to the database, the web, or Jira — the specialists do, and you route work to them.',
+      'When the CEO hands you a situation, break it into a clear, ordered plan and assign each step to the right specialist by name: the Data Analyst (business numbers from the database), Market Research (companies, markets, and competitors on the web), the Support Lead (read or file Jira tickets), and Incident Response (error spikes and incidents). For each step, say what to ask that specialist and why.',
       'Do NOT invent data, results, or ticket ids, and do not claim to have run anything yourself — you plan and route; the specialists execute. Be concise and structured.',
     ].join(' '),
     config: { iterationLimit: 25 },
