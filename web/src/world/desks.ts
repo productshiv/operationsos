@@ -1,7 +1,7 @@
 export const WORLD_W = 980;
 export const WORLD_H = 580;
 
-export type DeskKind = 'agent' | 'inbox' | 'door' | 'hr';
+export type DeskKind = 'agent' | 'door' | 'hr';
 export type Activity = 'bars' | 'cursor';
 
 export interface Desk {
@@ -28,7 +28,6 @@ export const DESKS: Desk[] = [
   { id: 'handler', name: 'OPERATIONS MANAGER', plate: 'OPERATIONS MANAGER', x: 730, y: 74, w: 200, h: 104, kind: 'agent', stat: 'routing OP-4471', act: 'cursor' },
   { id: 'medic', name: 'SUPPORT LEAD', plate: 'SUPPORT LEAD', x: 748, y: 296, w: 182, h: 104, kind: 'agent', stat: 'triaging tickets', act: 'bars' },
   { id: 'watch', name: 'INCIDENT RESPONSE', plate: 'INCIDENT RESPONSE', x: 738, y: 444, w: 192, h: 104, kind: 'agent', stat: 'systems nominal', act: 'cursor' },
-  { id: 'inbox', name: 'INBOX', plate: 'YOUR BOX', x: 64, y: 430, w: 170, h: 110, kind: 'inbox' },
   { id: 'sales', name: '', plate: 'SALES · v2', x: 300, y: 452, w: 120, h: 74, kind: 'door' },
   { id: 'pm', name: '', plate: 'PM · v2', x: 470, y: 452, w: 120, h: 74, kind: 'door' },
   { id: 'hr', name: 'HR', plate: 'HR ROOM', x: 66, y: 250, w: 150, h: 96, kind: 'hr' },

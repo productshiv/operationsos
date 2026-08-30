@@ -594,6 +594,8 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     turnError,
     /** True while restoring a prior conversation on open. */
     hydrating,
+    /** Set when the agent asked the CEO something and is waiting on the answer. */
+    question,
     /** True when restoring failed (lookup/history error) — composer stays disabled, offer Retry. */
     hydrationError,
     retryHydration,
