@@ -422,6 +422,14 @@
   box-shadow: 7px 7px 0 var(--sh);
   display: flex;
   flex-direction: column;
+  /* Windows hold readable content — let people select & copy it even though the floor doesn't. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* The event ticker is also worth copying (ids, queries). */
+.ticker {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .win .wtb {
   display: flex;
@@ -1021,6 +1029,54 @@ code {
 }
 .typing {
   font-size: 12px;
+}
+/* One-click follow-up actions under a reply — gold, because they lead to a consequence. */
+.quickacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.qact {
+  border: 2px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  color: var(--ink);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.qact:hover {
+  background: color-mix(in srgb, var(--gold) 24%, transparent);
+}
+.qact:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Turn a "connector not configured" failure into a one-click fix. */
+.fixcard {
+  border: 2px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.fixcard p {
+  margin: 0;
+  font-size: 13.5px;
+}
+.fixcard code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  background: var(--sink);
+  padding: 1px 5px;
+}
+.fixrow {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
 }
 
 /* the gold authorisation gate, inline in the thread — the only colour */

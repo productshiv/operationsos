@@ -2,7 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
+import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
 import type { AgentConfig } from '../lib/agents';
+
+/** Strip minimax's internal reasoning tags (`<mm:think>…</mm:think>`) — including an unclosed one
+ *  mid-stream — so they never leak into the visible reply. */
+function stripThink(text: string): string {
+  return text
+    .replace(/<mm:think>[\s\S]*?<\/mm:think>/g, '')
+    .replace(/<mm:think>[\s\S]*$/g, '')
+    .replace(/<\/mm:think>/g, '')
+    .trimStart();
+}
 
 /** Assistant replies are markdown; render them (links open safely in a new tab). */
 function Markdown({ text }: { text: string }) {
@@ -12,7 +23,7 @@ function Markdown({ text }: { text: string }) {
         remarkPlugins={[remarkGfm]}
         components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
       >
-        {text}
+        {stripThink(text)}
       </ReactMarkdown>
     </div>
   );
@@ -50,20 +61,55 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * touch the database until you authorise.
  */
 export function AgentChat({ agent }: { agent: AgentConfig }) {
-  const { items, busy, pending, send, decide } = useAgentChat(agent.spec);
+  const { items, busy, pending, needsConnector, turnError, send, decide, retry, clearNeedsConnector, clearTurnError } =
+    useAgentChat(agent.spec);
   const [draft, setDraft] = useState('');
+  const [fixing, setFixing] = useState(false);
+  const [fixErr, setFixErr] = useState<string | null>(null);
+  // The catalog entry for the missing connector (prefetched), so we know whether a one-click add is
+  // possible (no-auth) or it needs credentials/OAuth that only the Integrations panel collects.
+  const [entry, setEntry] = useState<CatalogConnector | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const l = logRef.current;
     if (l) l.scrollTop = l.scrollHeight;
-  }, [items, pending, busy]);
+  }, [items, pending, busy, needsConnector, turnError]);
+
+  useEffect(() => {
+    setFixErr(null);
+    if (!needsConnector) {
+      setEntry(null);
+      return;
+    }
+    let cancelled = false;
+    void listCatalog().then((cat) => {
+      if (!cancelled) setEntry(cat.find((c) => c.name === needsConnector) ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [needsConnector]);
 
   const submit = (text: string) => {
     const t = text.trim();
     if (!t || busy || pending) return;
     setDraft('');
     void send(t);
+  };
+
+  // Only no-auth connectors can be added in one click; header/OAuth ones need credentials the
+  // Integrations panel collects properly, so those route there and the CEO retries afterwards.
+  const addAndContinue = async () => {
+    if (!entry || entry.authType !== 'none') return;
+    setFixing(true);
+    setFixErr(null);
+    try {
+      await addCatalogConnector(entry);
+      await retry();
+    } catch {
+      setFixErr('Couldn’t add it — try again, or add it in Integrations.');
+    } finally {
+      setFixing(false);
+    }
   };
 
   return (
@@ -92,7 +138,58 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           </div>
         ))}
 
+        {/* Follow-up actions, only when the latest reply actually succeeded — never next to an error
+            or a connector-recovery prompt, so they can't act on a stale, unrelated reply. */}
+        {agent.quickActions?.length &&
+        !busy &&
+        !pending &&
+        !turnError &&
+        !needsConnector &&
+        items[items.length - 1]?.role === 'assistant' ? (
+          <div className="quickacts">
+            {agent.quickActions.map((a) => (
+              <button key={a.label} className="qact" onClick={() => submit(a.prompt)}>
+                ⚡ {a.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {busy && !pending && <div className="typing muted">…thinking</div>}
+
+        {turnError && !busy && !needsConnector && (
+          <div className="fixcard">
+            <p>{turnError}</p>
+            <div className="fixrow">
+              <button className="btn go" onClick={() => void retry()}>Try again</button>
+              <button className="btn" onClick={clearTurnError}>Dismiss</button>
+            </div>
+          </div>
+        )}
+
+        {needsConnector && !busy && (
+          <div className="fixcard">
+            <p>
+              <b>{agent.name}</b> needs the <code>{needsConnector}</code> tool, which isn’t connected yet.
+              {entry && entry.authType !== 'none' && (
+                <> It needs {entry.authType === 'header' ? 'an API key' : 'sign-in'} — add it in{' '}
+                <b>Integrations</b> (top bar), then Try again.</>
+              )}
+              {entry === null && <> Add it in <b>Integrations</b> (top bar), then Try again.</>}
+            </p>
+            <div className="fixrow">
+              {entry?.authType === 'none' ? (
+                <button className="btn go" onClick={() => void addAndContinue()} disabled={fixing}>
+                  {fixing ? 'Adding…' : `＋ Add ${needsConnector} & continue`}
+                </button>
+              ) : (
+                <button className="btn go" onClick={() => void retry()}>Try again</button>
+              )}
+              <button className="btn" onClick={clearNeedsConnector} disabled={fixing}>Dismiss</button>
+            </div>
+            {fixErr && <div className="apwarn">{fixErr}</div>}
+          </div>
+        )}
 
         {pending && (
           <div className="approval">

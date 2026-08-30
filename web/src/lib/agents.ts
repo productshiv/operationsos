@@ -17,6 +17,12 @@ export interface AgentConfig {
   /** Inline TrueForge AgentSpec passed when opening a session. */
   spec: Record<string, unknown>;
   suggestions: string[];
+  /**
+   * One-click follow-ups offered once the agent has replied. Each sends its `prompt` as the next
+   * message — typically an action (e.g. open a ticket) that runs a write tool and so pauses at the
+   * approval gate before anything is pushed.
+   */
+  quickActions?: { label: string; prompt: string }[];
 }
 
 const dataAnalyst: AgentConfig = {
@@ -31,6 +37,7 @@ const dataAnalyst: AgentConfig = {
       'You do NOT know the schema in advance. First discover it — call list_tables (or SELECT from information_schema.tables / information_schema.columns via execute_sql) to learn the real tables and columns — then write read-only SQL to answer. SELECT only; never INSERT, UPDATE, DELETE, or run DDL.',
       `The business's Supabase project ref is ${WEATHERAPI_PROJECT_REF} (name: WeatherAPI). Always pass it as project_id to the supabase tools; never use another project.`,
       'Answer concisely: lead with the key number, then one line of context. For trends, describe the shape (up/down/flat and rough magnitude). Money is stored in cents.',
+      'When asked to open a ticket, draft it (a clear summary and a description capturing the finding and recommended fix) and then call the atlassian/Jira create tool directly in that turn. The harness automatically pauses for the CEO to authorise before the issue is actually created, so create it rather than asking permission again in text.',
     ].join(' '),
     // camelCase per the SDK AgentSpec; preload exposes the tools directly (not the deferred
     // call_tool wrapper) so the model calls execute_sql with its real schema.
@@ -40,6 +47,8 @@ const dataAnalyst: AgentConfig = {
         enableTools: ['execute_sql', 'list_tables', 'list_projects', 'get_project'],
         preload: true,
       },
+      // So a finding can become a Jira ticket in one click. Writes pause at the approval gate.
+      { name: 'atlassian', preload: true },
     ],
     config: { iterationLimit: 25 },
   },
@@ -47,6 +56,13 @@ const dataAnalyst: AgentConfig = {
     'How many customers do we have, and what is our MRR?',
     'Which account looks like it is churning?',
     'Any incident in the last week?',
+  ],
+  quickActions: [
+    {
+      label: 'Open a ticket',
+      prompt:
+        'Open a Jira ticket for the most important issue in your last message. Give it a clear summary and a description with the finding and the recommended fix.',
+    },
   ],
 };
 
