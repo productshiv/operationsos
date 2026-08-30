@@ -86,13 +86,7 @@ export function Office({
       </div>
 
       {open && (
-        <DeskWindow
-          desk={open}
-          jira={jira}
-          agentModel={agentModel}
-          jukebox={jukebox}
-          onClose={() => setOpenId(null)}
-        />
+        <DeskWindow desk={open} jira={jira} agentModel={agentModel} onClose={() => setOpenId(null)} />
       )}
 
       {boardOpen && (

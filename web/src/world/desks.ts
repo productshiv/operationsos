@@ -34,12 +34,16 @@ export const DESKS: Desk[] = [
   { id: 'hr', name: 'HR', plate: 'HR ROOM', x: 66, y: 250, w: 150, h: 96, kind: 'hr' },
 ];
 
-/** Where everyone stands when the CEO calls a floor party (the rug is the dance floor). */
+/**
+ * Where everyone stands when the CEO calls a floor party. The rug is the dance floor; these sit below
+ * the bar (which runs along its top, y≈216–256) and leave room for the shared step routine, which
+ * travels ±20px horizontally.
+ */
 export const DANCE_SPOTS: Array<{ x: number; y: number }> = [
-  { x: 350, y: 250 },
-  { x: 420, y: 300 },
-  { x: 490, y: 250 },
-  { x: 560, y: 300 },
-  { x: 400, y: 350 },
-  { x: 520, y: 350 },
+  { x: 355, y: 288 },
+  { x: 435, y: 332 },
+  { x: 510, y: 288 },
+  { x: 590, y: 332 },
+  { x: 395, y: 366 },
+  { x: 550, y: 366 },
 ];

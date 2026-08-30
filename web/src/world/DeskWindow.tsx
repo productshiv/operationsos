@@ -3,7 +3,6 @@ import type { Desk } from './desks';
 import { AGENTS } from '../lib/agents';
 import { AgentChat } from '../agents/AgentChat';
 import { callEveryone, endParty, useParty } from '../state/party';
-import type { useJukebox } from '../state/useJukebox';
 
 /**
  * The window that opens when you interact with a desk. Live agents (those with a config) get a
@@ -13,7 +12,6 @@ export function DeskWindow({
   desk,
   jira,
   agentModel,
-  jukebox,
   onClose,
 }: {
   desk: Desk;
@@ -21,8 +19,6 @@ export function DeskWindow({
   jira: string | null | undefined;
   /** The model agents run on (the CEO's chosen default), injected into the agent spec. */
   agentModel: string;
-  /** The jukebox — a floor party starts the music, so the bar actually has sound. */
-  jukebox: ReturnType<typeof useJukebox>;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -61,10 +57,6 @@ export function DeskWindow({
                     className="btn go"
                     onClick={() => {
                       callEveryone();
-                      // Start the music here, inside the click — browsers only allow audio to start
-                      // from a user gesture, so kicking it off later (when everyone arrives) would be
-                      // blocked. `toggle` also selects the first track if none is current yet.
-                      if (!jukebox.playing) jukebox.toggle();
                       onClose();
                     }}
                   >

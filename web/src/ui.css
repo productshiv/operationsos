@@ -578,11 +578,10 @@
 /* The bar TV — sits above the dance floor, showing the jukebox track. */
 .bartv {
   position: absolute;
-  /* Mounted at the top of the dance floor (the rug) — the gap above it is only ~32px, so the TV sits
-     just inside the floor, above the dancers' spots (which start at y≈250). */
-  left: 620px;
-  top: 216px;
-  width: 150px;
+  /* Mounted on the wall above the bar, in the clear band between the desk row and the rug. */
+  left: 404px;
+  top: 180px;
+  width: 172px;
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -592,8 +591,8 @@
   width: 100%;
   border: 2px solid var(--ink);
   background: var(--panel);
-  box-shadow: 4px 4px 0 var(--sh);
-  padding: 6px;
+  box-shadow: 3px 3px 0 var(--sh);
+  padding: 3px 5px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -602,7 +601,7 @@
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  height: 26px;
+  height: 13px;
 }
 .bartv-bars i {
   flex: 1;
@@ -642,12 +641,51 @@
 .partygoer.dancing .armR {
   transform-origin: 16px 16px;
 }
-.partygoer.dancing.half-r .roamer-body,
-.partygoer.dancing.half-r .armL,
-.partygoer.dancing.half-r .armR,
-.partygoer.dancing.half-r .legA,
-.partygoer.dancing.half-r .legB {
-  animation-delay: 0.25s; /* half a beat behind the left half */
+/* A shared 16-beat routine (0.8s per beat), danced in lockstep. It isn't a single repeating
+   shuffle: the two halves of the floor first split apart and come back, then everyone HOLDS on the
+   spot for four beats doing only their own move, then they trade single steps. Both halves run the
+   same duration and start together, so they stay in sync while doing complementary things.
+   `steps(1)` makes each beat a discrete step rather than a slide. */
+.partygoer.dancing.half-l {
+  animation: choreoL 12.8s steps(1) infinite;
+}
+.partygoer.dancing.half-r {
+  animation: choreoR 12.8s steps(1) infinite;
+}
+/* Left half: out two steps left, back, two right, back, hold, then trade single steps. */
+@keyframes choreoL {
+  0%     { transform: translateX(0); }
+  6.25%  { transform: translateX(-14px); }
+  12.5%  { transform: translateX(-28px); }
+  18.75% { transform: translateX(-14px); }
+  25%    { transform: translateX(0); }
+  31.25% { transform: translateX(14px); }
+  37.5%  { transform: translateX(28px); }
+  43.75% { transform: translateX(14px); }
+  50%    { transform: translateX(0); }
+  /* beats 9–12: hold the spot — just the individual moves */
+  75%    { transform: translateX(0); }
+  81.25% { transform: translateX(-14px); }
+  87.5%  { transform: translateX(0); }
+  93.75% { transform: translateX(14px); }
+  100%   { transform: translateX(0); }
+}
+/* Right half: the mirror, so the groups open apart and close together. */
+@keyframes choreoR {
+  0%     { transform: translateX(0); }
+  6.25%  { transform: translateX(14px); }
+  12.5%  { transform: translateX(28px); }
+  18.75% { transform: translateX(14px); }
+  25%    { transform: translateX(0); }
+  31.25% { transform: translateX(-14px); }
+  37.5%  { transform: translateX(-28px); }
+  43.75% { transform: translateX(-14px); }
+  50%    { transform: translateX(0); }
+  75%    { transform: translateX(0); }
+  81.25% { transform: translateX(14px); }
+  87.5%  { transform: translateX(0); }
+  93.75% { transform: translateX(-14px); }
+  100%   { transform: translateX(0); }
 }
 
 /* bob — up-down with a little tilt */
@@ -706,6 +744,80 @@
 .viewport.partymode .door,
 .viewport.partymode .hrroom {
   opacity: 0.45;
+}
+
+
+/* ---- the bar: back shelf, working bartender, counter ---- */
+.barshelf {
+  position: absolute;
+  left: 312px;
+  top: 216px;
+  width: 356px;
+  height: 20px;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  border-bottom: 2px solid var(--ink);
+  opacity: 0.75;
+}
+.barshelf i {
+  width: 5px;
+  height: 11px;
+  background: var(--ink);
+}
+.barshelf i.tall {
+  height: 17px;
+}
+/* The bartender works behind the counter, sliding along it and shaking a drink. */
+.bartender {
+  position: absolute;
+  left: 340px;
+  top: 220px;
+  width: 20px;
+  height: 28px;
+  pointer-events: none;
+  animation: tendbar 9s ease-in-out infinite alternate;
+}
+@keyframes tendbar {
+  0%   { transform: translateX(0) scaleX(1); }
+  49%  { transform: translateX(280px) scaleX(1); }
+  50%  { transform: translateX(280px) scaleX(-1); }
+  100% { transform: translateX(0) scaleX(-1); }
+}
+.bartender-body {
+  position: relative;
+}
+.bartender .shakeArm {
+  transform-origin: 16px 14px;
+  animation: shakeit 0.28s steps(2) infinite;
+}
+@keyframes shakeit {
+  0%   { transform: rotate(-16deg) translateY(0); }
+  100% { transform: rotate(10deg) translateY(-2px); }
+}
+/* The counter sits in front of the bartender, so their lower half is hidden behind it. */
+.barcounter {
+  position: absolute;
+  left: 306px;
+  top: 240px;
+  width: 368px;
+  height: 16px;
+  pointer-events: none;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  background-image: repeating-linear-gradient(90deg, var(--dot) 0 2px, transparent 2px 10px);
+  box-shadow: 3px 3px 0 var(--sh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.barcounter-label {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.22em;
+  background: var(--panel);
+  padding: 0 4px;
 }
 
 /* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */

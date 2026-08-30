@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DANCE_SPOTS, DESKS, type Desk } from './desks';
 import { useReducedMotion } from './useReducedMotion';
 import { markArrived, useParty } from '../state/party';
@@ -17,8 +17,8 @@ const initials = (plate: string) =>
 
 const homeOf = (d: Desk) => ({ x: d.x + d.w / 2 - 10, y: d.y + d.h - 2 });
 
-/** The dance moves. Each agent gets its own, and the floor's left/right halves are offset by half a
- *  beat so the room moves in call-and-response rather than one synchronised blob. */
+/** The dance moves — each agent gets its own style, layered on top of the shared step routine (see
+ *  the `choreo` keyframes), so the group travels in lockstep while nobody looks like a clone. */
 const MOVES = ['bob', 'sway', 'stepTouch', 'raiseRoof', 'shimmy', 'spin'] as const;
 
 /** One agent walking to the dance floor, then dancing once the bar is open. */
@@ -54,6 +54,7 @@ function Partygoer({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const ink = 'var(--ink)';
   return (
@@ -91,13 +92,42 @@ function Partygoer({
   );
 }
 
-/** The bar: a big pixel TV showing the current jukebox track, plus a disco-lit dance floor. */
+/** The bartender, working the counter — slides along behind the bar, shaking a drink. */
+function Bartender() {
+  const ink = 'var(--ink)';
+  return (
+    <div className="bartender" aria-hidden="true">
+      <div className="bartender-body">
+        <span className="roamer-tag">BAR</span>
+        <svg viewBox="0 0 20 28" width="20" height="28" shapeRendering="crispEdges">
+          {/* head + bow tie + torso */}
+          <rect x="7" y="1" width="6" height="6" fill={ink} />
+          <rect x="8" y="8" width="4" height="2" fill={ink} />
+          <rect x="5" y="10" width="10" height="8" fill={ink} />
+          <rect x="9" y="11" width="2" height="5" fill="var(--paper)" />
+          <rect x="2" y="11" width="3" height="6" fill={ink} />
+          {/* shaking arm + shaker */}
+          <g className="shakeArm">
+            <rect x="15" y="11" width="3" height="6" fill={ink} />
+            <rect x="15" y="7" width="4" height="5" fill={ink} />
+            <rect x="16" y="8" width="2" height="3" fill="var(--paper)" />
+          </g>
+          <rect x="6" y="18" width="8" height="7" fill={ink} />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/** The bar: back-shelf bottles, the counter, a working bartender, the TV, and the lit dance floor. */
 function BarScene({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
   const track = jukebox.current;
   const title = track?.title || track?.videoId || 'nothing queued';
   return (
     <>
       <div className="dancefloor" aria-hidden="true" />
+
+      {/* TV mounted on the wall above the bar. */}
       <div className="bartv">
         <div className="bartv-screen">
           {/* The equalizer only animates while the jukebox is actually playing. */}
@@ -110,7 +140,17 @@ function BarScene({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
             {jukebox.playing ? '▶' : '❚❚'} {title}
           </div>
         </div>
-        <div className="bartv-stand" />
+      </div>
+
+      {/* The bar itself: bottle shelf behind, bartender working, counter in front. */}
+      <div className="barshelf" aria-hidden="true">
+        {Array.from({ length: 12 }, (_, i) => (
+          <i key={i} className={i % 3 === 0 ? 'tall' : ''} />
+        ))}
+      </div>
+      <Bartender />
+      <div className="barcounter" aria-hidden="true">
+        <span className="barcounter-label">BAR</span>
       </div>
     </>
   );
@@ -123,8 +163,31 @@ function BarScene({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
  */
 export function Party({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
   const { phase } = useParty();
-  if (phase === 'off') return null;
   const dancing = phase === 'party';
+
+  // Drop the needle the moment everyone's on the floor. The CEO clicked "Call everyone" moments ago,
+  // which gives the document sticky user activation, so the browser still allows audio to start here.
+  const handled = useRef(false); // this party has already decided about the music
+  const started = useRef(false); // ...and true only if the party is what actually started it
+  useEffect(() => {
+    if (!dancing || handled.current) return;
+    handled.current = true;
+    if (!jukebox.playing) {
+      started.current = true;
+      jukebox.toggle();
+    }
+  }, [dancing, jukebox]);
+  // ...and stop it when the party ends, so "Back to work" actually means back to work. Only pauses
+  // music this party started, so a track the CEO put on themselves beforehand is left alone.
+  useEffect(() => {
+    if (phase !== 'off' || !handled.current) return;
+    const wasOurs = started.current;
+    handled.current = false;
+    started.current = false;
+    if (wasOurs && jukebox.playing) jukebox.toggle();
+  }, [phase, jukebox]);
+
+  if (phase === 'off') return null;
   return (
     <>
       {dancing && <BarScene jukebox={jukebox} />}
