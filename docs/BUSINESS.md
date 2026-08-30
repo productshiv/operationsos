@@ -25,9 +25,23 @@ Table names below are only what this business happens to expose — reference, n
 | `oos_usage_daily` | customer_id, day, calls, errors | usage trends, anomaly / churn detection |
 | `oos_payments` | id, customer_id, ts, amount_cents, plan, status (`paid`/`failed`) | revenue, failed-payment follow-up |
 | `oos_error_events` | id, ts, endpoint, status_code, message, customer_id | incidents, affected customers |
+| `oos_support_complaints` | id, ts, customer_id, channel, subject, body, severity, status | what customers are complaining about → tickets |
+| `oos_pricing` | plan, monthly_cents, included_calls, overage, rate_limit_rpm, support, notes | "what do we charge?" |
 
-The tables and the data are owned by a separate service (the `weather-business` repo, hosted on
-Coolify) which also keeps them changing; this app only reads and acts on them.
+The tables and the data are owned by a separate service (the **`weather-business`** repo, hosted on
+Coolify); this app only reads and acts on them. That service does two jobs:
+
+1. **Stands the business up** — `schema.sql` + a seeder.
+2. **Keeps it moving** — a live feed makes one plausible change every ~20s (usage, a payment, a
+   signup, an error burst, a plan change, a churn) and every so often files a **customer complaint**.
+
+That last one closes the loop this product is built around: a complaint lands in
+`oos_support_complaints` → the Support Lead triages it → opens a Jira ticket through the approval
+gate → OperationsOS routes the follow-up task to the Operations Manager.
+
+Anything the agents should be able to answer has to *be* in here — which is why pricing is a table.
+Ask an agent "what do we charge?" with no `oos_pricing` and it will correctly tell you it doesn't
+know, which is honest but useless.
 
 ## Reaching the data + the safety gate
 
