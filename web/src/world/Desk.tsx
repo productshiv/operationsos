@@ -1,6 +1,7 @@
 import type { Desk as DeskData } from './desks';
 import { AgentSprite } from './AgentSprite';
 import { useOpenTaskCount } from '../state/tasks';
+import { usePresence } from '../state/presence';
 
 interface DeskProps {
   desk: DeskData;
@@ -12,6 +13,8 @@ export function Desk({ desk, onOpen }: DeskProps) {
   const style = { left: desk.x, top: desk.y, width: desk.w };
   // Active tasks routed to this agent — shown as a number badge (their workload to check on).
   const tasks = useOpenTaskCount(desk.id);
+  // Whether the agent is at their desk — when out (grabbing a coffee), the chair sits empty.
+  const away = usePresence(desk.id) === 'out';
 
   if (desk.kind === 'door') {
     return (
@@ -55,7 +58,7 @@ export function Desk({ desk, onOpen }: DeskProps) {
         </div>
       </div>
       <div className="seat">
-        <AgentSprite />
+        {away ? <div className="seat-empty" title="Away from desk" /> : <AgentSprite />}
         <div className="plate">{desk.plate}</div>
       </div>
       {tasks > 0 && (
