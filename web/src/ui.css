@@ -379,6 +379,64 @@
   display: block;
 }
 
+/* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */
+.prop {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  image-rendering: pixelated;
+  opacity: 0.9;
+}
+.prop svg {
+  display: block;
+  shape-rendering: crispedges;
+}
+.prop-label {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 0 2px;
+  opacity: 0.85;
+}
+.roamer {
+  z-index: 3;
+  width: 20px;
+  height: 28px;
+  opacity: 0.82;
+}
+.roamer .roamer-body {
+  transform-origin: center bottom;
+}
+.roamer .legB {
+  opacity: 0;
+}
+.roamer.walk .legA {
+  animation: legswapA 0.34s steps(1) infinite;
+}
+.roamer.walk .legB {
+  animation: legswapB 0.34s steps(1) infinite;
+}
+@keyframes legswapA {
+  0%, 49.9% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes legswapB {
+  0%, 49.9% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+.roamer:not(.walk) .roamer-body svg {
+  animation: idlebob 3.4s ease-in-out infinite;
+}
+@keyframes idlebob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+
 .prompt {
   position: absolute;
   transform: translate(-50%, -100%);

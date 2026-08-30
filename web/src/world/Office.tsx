@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { DESKS } from './desks';
+import { PROPS } from './ambient';
 import { Desk } from './Desk';
+import { Prop } from './Prop';
+import { Roamers } from './Roamers';
 import { Ceo } from './Ceo';
 import { TouchPad } from './TouchPad';
 import { DeskWindow } from './DeskWindow';
@@ -29,6 +32,11 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
     <div className="viewport" ref={viewportRef}>
       <div className="world" ref={worldRef}>
         <div className="rug" />
+        {/* Ambient life — props and wandering workers, behind the desks and the CEO. */}
+        {PROPS.map((p) => (
+          <Prop key={p.id} prop={p} />
+        ))}
+        <Roamers />
         {DESKS.map((desk) => (
           <Desk key={desk.id} desk={desk} onOpen={setOpenId} />
         ))}
