@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
+import { fetchHistory, findAgentSession } from '../lib/sessionHistory';
 
 export interface ToolActivity {
   id: string;
@@ -129,6 +130,9 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const [needsConnector, setNeedsConnector] = useState<string | null>(null);
   // Set when a turn failed for another reason (e.g. a network error) — shown with a Try-again.
   const [turnError, setTurnError] = useState<string | null>(null);
+  // True while we look up and replay this agent's prior session on open, so the composer waits and a
+  // send can't race in and spin up a second (empty) session before the existing one is restored.
+  const [hydrating, setHydrating] = useState(true);
 
   const sessionRef = useRef<string | null>(null);
   // The MCP server names the live session was actually created with — frozen at creation, since the
@@ -290,10 +294,49 @@ export function useAgentChat(spec: Record<string, unknown>) {
     [spec, rebuild],
   );
 
+  // On open, restore this agent's conversation from the harness (cross-device, no localStorage):
+  // find its prior session by the stable instructions, reuse the id so the agent keeps its context,
+  // and replay the session's events into the transcript. Keyed on `instructions` (stable — Jira
+  // injection doesn't change it) so it doesn't re-run and duplicate when the resolved spec updates;
+  // a fresh run each StrictMode/remount cancels the previous one before it mutates anything.
+  const instructions = typeof spec.instructions === 'string' ? spec.instructions : '';
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const found = instructions ? await findAgentSession(instructions) : null;
+      if (cancelled) return;
+      if (!found) {
+        setHydrating(false);
+        return;
+      }
+      const history = await fetchHistory(found.id);
+      if (cancelled) return;
+      sessionRef.current = found.id;
+      setSessionServers(found.mcpServers);
+      for (const h of history) {
+        if (h.kind === 'user') {
+          const key = `user:${counterRef.current++}`;
+          userTextRef.current.set(key, h.text);
+          orderRef.current.push(key);
+        } else if (h.kind === 'assistant') {
+          basesRef.current.set(h.id, { id: h.id, threadId: 'main', content: h.text, toolCalls: h.toolCalls });
+          orderRef.current.push(h.id);
+        } else {
+          toolResultRef.current.set(h.toolCallId, h.content);
+        }
+      }
+      rebuild();
+      setHydrating(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [instructions, rebuild]);
+
   const send = useCallback(
     async (text: string) => {
       const t = text.trim();
-      if (busy || pending || !t) return; // don't start a turn while a checkpoint is open
+      if (busy || pending || hydrating || !t) return; // don't start a turn while restoring or paused
       const key = `user:${counterRef.current++}`;
       userTextRef.current.set(key, t);
       orderRef.current.push(key);
@@ -301,7 +344,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
       rebuild();
       await runTurn(t);
     },
-    [busy, pending, runTurn, rebuild],
+    [busy, pending, hydrating, runTurn, rebuild],
   );
 
   /** Re-run the last message — e.g. after adding the connector it needed. */
@@ -360,6 +403,8 @@ export function useAgentChat(spec: Record<string, unknown>) {
     pending,
     needsConnector,
     turnError,
+    /** True while restoring a prior conversation on open. */
+    hydrating,
     /** MCP server names the live session was created with, or null before the first turn. */
     sessionServers,
     send,

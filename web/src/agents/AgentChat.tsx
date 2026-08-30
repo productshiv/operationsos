@@ -65,7 +65,7 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
   // injected into the spec at runtime — so a missing or renamed Jira never breaks this agent's normal
   // answers, and the atlassian/jira naming difference is handled for us.
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null), [agent, jira]);
-  const { items, busy, pending, needsConnector, turnError, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
+  const { items, busy, pending, needsConnector, turnError, hydrating, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
     useAgentChat(spec);
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so
   // it never targets a session that can't invoke it (e.g. Jira was added after the session started).
@@ -99,7 +99,7 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
 
   const submit = (text: string) => {
     const t = text.trim();
-    if (!t || busy || pending) return;
+    if (!t || busy || pending || hydrating) return;
     setDraft('');
     void send(t);
   };
@@ -130,7 +130,10 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
       </div>
 
       <div className="chatlog" ref={logRef}>
-        {items.length === 0 && !busy && (
+        {hydrating && items.length === 0 && (
+          <p className="typing muted" style={{ fontSize: 13 }}>…restoring conversation</p>
+        )}
+        {!hydrating && items.length === 0 && !busy && (
           <p className="muted" style={{ fontSize: 13 }}>{agent.blurb}</p>
         )}
 
@@ -237,7 +240,7 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
 
       <div className="chips">
         {agent.suggestions.map((s) => (
-          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending}>{s}</button>
+          <button key={s} className="qchip" onClick={() => submit(s)} disabled={busy || !!pending || hydrating}>{s}</button>
         ))}
       </div>
 
@@ -247,10 +250,10 @@ export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | 
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(draft); }}
-          placeholder={`Ask ${agent.name}…`}
-          disabled={busy || !!pending}
+          placeholder={hydrating ? 'Restoring conversation…' : `Ask ${agent.name}…`}
+          disabled={busy || !!pending || hydrating}
         />
-        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending}>Send</button>
+        <button className="btn send" onClick={() => submit(draft)} disabled={busy || !!pending || hydrating}>Send</button>
       </div>
     </>
   );
