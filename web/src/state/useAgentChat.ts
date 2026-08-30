@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
-import { abandonSession, fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
+import { abandonSession, fetchHistory, findAgentSession, unabandonSession, type RawToolCallLike } from '../lib/sessionHistory';
 import { addTask, clearAttention, setAttention } from './tasks';
 
 export interface ToolActivity {
@@ -163,8 +163,10 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   // the composer disabled and offer a Retry, rather than silently starting a second conversation
   // (forking) or attaching a session whose history we couldn't actually load (hidden divergence).
   const [hydrationError, setHydrationError] = useState(false);
-  // Bumped by retryHydration() to re-run the restore effect.
+  // Bumped by retryHydration()/openSession() to re-run the restore effect.
   const [hydrateNonce, setHydrateNonce] = useState(0);
+  // When the CEO picks a specific past conversation, restore THAT one instead of the newest match.
+  const forcedSessionRef = useRef<string | null>(null);
 
   const sessionRef = useRef<string | null>(null);
   // The MCP server names the live session was actually created with — frozen at creation, since the
@@ -383,7 +385,10 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
         return;
       }
       const serverNames = serverKey ? serverKey.split(',') : [];
-      const look = await findAgentSession(instructions, modelName, serverNames);
+      const forced = forcedSessionRef.current;
+      const look = forced
+        ? ({ status: 'found', session: { id: forced, mcpServers: serverNames } } as const)
+        : await findAgentSession(instructions, modelName, serverNames);
       if (cancelled) return;
       if (look.status === 'error') {
         // Lookup failed — don't start a new session (that would fork an existing conversation).
@@ -449,6 +454,16 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   const retryHydration = useCallback(() => setHydrateNonce((n) => n + 1), []);
 
   /**
+   * Reopen one of this agent's past conversations. Picking it explicitly also un-abandons it, so it
+   * becomes the live thread again rather than being skipped on the next open.
+   */
+  const openSession = useCallback((id: string) => {
+    unabandonSession(id);
+    forcedSessionRef.current = id;
+    setHydrateNonce((n) => n + 1);
+  }, []);
+
+  /**
    * Start a fresh conversation: clear the transcript and drop the session id, so the next message
    * opens a NEW server session and the current (e.g. error-filled) one is left behind. Note the
    * abandoned session still exists server-side; once the new session gets its first turn it becomes
@@ -458,6 +473,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
     // before the replacement gets its first turn.
     if (sessionRef.current) abandonSession(sessionRef.current);
+    forcedSessionRef.current = null; // a fresh thread, not a pinned past one
     clearAttention(agentId); // starting fresh — no longer waiting on the CEO
     orderRef.current = [];
     basesRef.current.clear();
@@ -562,6 +578,10 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     /** True when restoring failed (lookup/history error) — composer stays disabled, offer Retry. */
     hydrationError,
     retryHydration,
+    /** Reopen a specific past conversation. */
+    openSession,
+    /** The conversation currently on screen (null before the first turn of a brand-new one). */
+    sessionId: sessionRef.current,
     /** Start a fresh conversation (clears the transcript and the session). */
     newChat,
     /** MCP server names the live session was created with, or null before the first turn. */

@@ -6,6 +6,7 @@ import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/
 import { AGENTS, buildAgentSpec, type AgentConfig } from '../lib/agents';
 import { consultAgent } from '../lib/consult';
 import { setAttention } from '../state/tasks';
+import { listAgentSessions, sessionPreview, type PastSession } from '../lib/sessionHistory';
 
 /** The reply flags something worth a ticket — so "Open a ticket" is offered contextually, not after
  *  every message. Matches escalation language, warnings, and problems an agent would want tracked. */
@@ -82,7 +83,7 @@ export function AgentChat({
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
   const {
     items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration, newChat,
-    sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError,
+    sessionServers, sessionId, openSession, send, decide, retry, clearNeedsConnector, clearTurnError,
   } = useAgentChat(spec, agent.id);
   const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so
@@ -101,6 +102,9 @@ export function AgentChat({
   // Agent-to-agent: who we're currently asking, and anything that came back needing the CEO.
   const [asking, setAsking] = useState<string | null>(null);
   const [consultNote, setConsultNote] = useState<string | null>(null);
+  // Past conversations for this agent, loaded when the picker is opened.
+  const [pastOpen, setPastOpen] = useState(false);
+  const [past, setPast] = useState<Array<PastSession & { label?: string }> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,6 +146,36 @@ export function AgentChat({
     } finally {
       setFixing(false);
     }
+  };
+
+  // Load the history list only when the picker is opened — it costs a request per conversation.
+  useEffect(() => {
+    if (!pastOpen) return;
+    let cancelled = false;
+    setPast(null);
+    void (async () => {
+      const instructions = typeof spec.instructions === 'string' ? spec.instructions : '';
+      const model = (spec.model as { name?: string } | undefined)?.name ?? '';
+      const servers = Array.isArray(spec.mcpServers)
+        ? (spec.mcpServers as Array<{ name?: string }>).map((x) => x?.name ?? '').filter(Boolean)
+        : [];
+      const list = (await listAgentSessions(instructions, model, servers)).slice(0, 8);
+      if (cancelled) return;
+      setPast(list);
+      // Then fill in what each one was about, so the list reads as conversations not timestamps.
+      const labels = await Promise.all(list.map((p) => sessionPreview(p.id)));
+      if (!cancelled) setPast(list.map((p, i) => ({ ...p, label: labels[i] })));
+    })();
+    return () => { cancelled = true; };
+  }, [pastOpen, spec]);
+
+  /** "15:04" for today, otherwise "30 Aug 15:04". */
+  const when = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay ? time : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
   };
 
   /** The other agents on the floor — who this one can pull into the conversation. */
@@ -188,6 +222,38 @@ export function AgentChat({
         <div className="aghead-right">
           {/* Start over — clears the transcript and starts a fresh session (drops a piled-up or
               error-filled conversation). Only offered once there's something to clear. */}
+          <div className="pastwrap">
+            <button
+              className="link-btn"
+              onClick={() => setPastOpen((o) => !o)}
+              disabled={busy || hydrating}
+              aria-expanded={pastOpen}
+            >
+              Past chats ▾
+            </button>
+            {pastOpen && (
+              <div className="pastmenu">
+                {past === null && <div className="pastempty dim">Loading…</div>}
+                {past?.length === 0 && <div className="pastempty dim">No past conversations yet.</div>}
+                {past?.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`pastitem${p.id === sessionId ? ' current' : ''}`}
+                    onClick={() => {
+                      setPastOpen(false);
+                      if (p.id !== sessionId) openSession(p.id);
+                    }}
+                  >
+                    <span className="pastlabel">{p.label || 'Untitled conversation'}</span>
+                    <span className="dim pastwhen">
+                      {when(p.updatedAt)}
+                      {p.id === sessionId ? ' · current' : p.abandoned ? ' · set aside' : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {(items.length > 0 || turnError || hydrationError) && !busy && (
             <button className="link-btn" onClick={newChat} disabled={hydrating}>New chat</button>
           )}
