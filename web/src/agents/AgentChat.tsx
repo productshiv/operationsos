@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
 import type { AgentConfig } from '../lib/agents';
+
+/** Assistant replies are markdown; render them (links open safely in a new tab). */
+function Markdown({ text }: { text: string }) {
+  return (
+    <div className="mtext md">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 /** One tool call in the thread — collapsed to a one-line header by default, expandable for detail. */
 function ToolCard({ tool }: { tool: ToolActivity }) {
@@ -70,7 +86,9 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
             {it.tools.map((t) => (
               <ToolCard key={t.id} tool={t} />
             ))}
-            {it.text && <div className="mtext">{it.text}</div>}
+            {it.text && (it.role === 'assistant'
+              ? <Markdown text={it.text} />
+              : <div className="mtext">{it.text}</div>)}
           </div>
         ))}
 
