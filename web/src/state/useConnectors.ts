@@ -3,6 +3,7 @@ import {
   addCatalogConnector,
   authorizeConnector,
   createConnector,
+  disconnectConnector,
   listCatalog,
   listConnectors,
   type CatalogConnector,
@@ -17,8 +18,8 @@ export interface ConnectorsState {
   connectors: Connector[];
 }
 
-/** Per-connector state while the CEO is authorising it. */
-export type ConnectState = 'idle' | 'authorizing' | 'error';
+/** Per-connector state while the CEO is authorising or disconnecting it. */
+export type ConnectState = 'idle' | 'authorizing' | 'disconnecting' | 'error';
 
 /** State while the CEO is registering a new connector. */
 export type AddState = 'idle' | 'saving' | 'error';
@@ -93,6 +94,20 @@ export function useConnectors() {
     [refresh],
   );
 
+  const disconnect = useCallback(
+    async (name: string) => {
+      setConnectState((s) => ({ ...s, [name]: 'disconnecting' }));
+      try {
+        await disconnectConnector(name);
+        await refresh();
+        setConnectState((s) => ({ ...s, [name]: 'idle' }));
+      } catch {
+        setConnectState((s) => ({ ...s, [name]: 'error' }));
+      }
+    },
+    [refresh],
+  );
+
   const add = useCallback(
     async (input: CreateConnectorInput): Promise<boolean> => {
       setAddState('saving');
@@ -138,6 +153,7 @@ export function useConnectors() {
     catalogState,
     refresh,
     connect,
+    disconnect,
     add,
     addFromCatalog,
   };

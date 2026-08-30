@@ -34,6 +34,16 @@ export async function authorizeConnector(name: string): Promise<{
   return { status: status.status, authorizationUrl: status.authorizationUrl };
 }
 
+/**
+ * Disconnect a connector — revoke its stored OAuth token so it returns to `auth_required` and can
+ * be re-authorised (e.g. to switch accounts). A no-op for header / no-auth servers. Note this keeps
+ * the connector's dynamically-registered OAuth client, so it re-authorises against the same
+ * redirect; it does not re-register that client.
+ */
+export async function disconnectConnector(name: string): Promise<void> {
+  await trueforgeControl.mcpServers.deleteAuthorization(name);
+}
+
 /** How a new connector authenticates. `oauth` runs TrueForge's DCR flow after creation. */
 export type ConnectorAuthKind = 'none' | 'header' | 'oauth';
 
