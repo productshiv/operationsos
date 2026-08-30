@@ -413,6 +413,12 @@
   cursor: pointer;
   box-shadow: 2px 2px 0 var(--sh);
   z-index: 9;
+}
+/* Calm when it's just tasks; pulse only when an agent is actually waiting on your sign-off. */
+.youbadge:not(.urgent) {
+  background: var(--panel);
+}
+.youbadge.urgent {
   animation: youpulse 1.4s ease-in-out infinite;
 }
 @keyframes youpulse {

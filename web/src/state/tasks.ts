@@ -42,19 +42,24 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 const isTask = (v: unknown): v is Task =>
   isObject(v) && typeof v.id === 'string' && typeof v.title === 'string' && typeof v.assignedTo === 'string';
+const isAttentionItem = (v: unknown): v is AttentionItem =>
+  isObject(v) && typeof v.agentId === 'string' && typeof v.label === 'string' && typeof v.ts === 'number';
 
 function load(): Board {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      // Validate runtime shapes — valid JSON with the wrong types (e.g. `{"tasks":{}}`) must not
-      // slip through and crash a later `.filter`.
+      // Validate runtime shapes — valid JSON with the wrong types (e.g. `{"tasks":{}}` or
+      // `{"attention":{"x":null}}`) must not slip through and crash a later `.filter`/`.sort`.
       const p = JSON.parse(raw) as unknown;
       const obj = isObject(p) ? p : {};
       const tasks = Array.isArray(obj.tasks) ? obj.tasks.filter(isTask) : [];
-      const attention = isObject(obj.attention)
-        ? (obj.attention as Record<string, AttentionItem>)
-        : {};
+      const attention: Record<string, AttentionItem> = {};
+      if (isObject(obj.attention)) {
+        for (const [k, v] of Object.entries(obj.attention)) {
+          if (isAttentionItem(v)) attention[k] = v;
+        }
+      }
       return { tasks, attention };
     }
   } catch {

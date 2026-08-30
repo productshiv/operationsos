@@ -123,11 +123,11 @@ function friendlyError(message: string): string {
   return message;
 }
 
-/** A tool call is a Jira *issue* creation — used to route a follow-up task when it's authorised.
- *  Requires "issue" in the tool name, so a Confluence page create (createPage/…) is not mistaken
- *  for a ticket just because it's on the atlassian server. */
+/** A tool call is a Jira *issue* creation — used to route a follow-up task when it's authorised. The
+ *  tool must start with "create" and END with "issue", so createJiraIssue/createIssue qualify but
+ *  createIssueLink (a link, not a new ticket) and createPage (Confluence) do not. */
 function isTicketCreate(tool: string): boolean {
-  return /create/i.test(tool) && /issue/i.test(tool);
+  return /^create/i.test(tool) && /issue$/i.test(tool);
 }
 /** Pull a human title out of a create-issue tool's arguments (summary field), if present. */
 function ticketTitle(input?: string): string {
