@@ -23,11 +23,11 @@ export interface Desk {
  * walkable corridor between them. Agents sit behind their screens; doors are locked (roadmap).
  */
 export const DESKS: Desk[] = [
-  { id: 'analyst', name: 'ANALYST.rpt', plate: 'ANALYST', x: 66, y: 78, w: 172, h: 96, kind: 'agent', stat: 'query running…', act: 'bars' },
-  { id: 'scout', name: 'SCOUT.web', plate: 'SCOUT', x: 404, y: 66, w: 168, h: 92, kind: 'agent', stat: 'researching market', act: 'cursor' },
-  { id: 'handler', name: 'HANDLER.op', plate: 'HANDLER', x: 748, y: 78, w: 176, h: 96, kind: 'agent', stat: 'coordinating OP-4471', act: 'cursor', flag: true },
-  { id: 'medic', name: 'SUPPORT.tix', plate: 'SUPPORT', x: 770, y: 300, w: 158, h: 92, kind: 'agent', stat: '2 tickets open', act: 'bars' },
-  { id: 'watch', name: 'WATCH.mon', plate: 'WATCH', x: 770, y: 448, w: 158, h: 92, kind: 'agent', stat: 'systems nominal', act: 'cursor' },
+  { id: 'analyst', name: 'DATA ANALYST', plate: 'DATA ANALYST', x: 66, y: 78, w: 180, h: 96, kind: 'agent', stat: 'query running…', act: 'bars' },
+  { id: 'scout', name: 'MARKET RESEARCH', plate: 'MARKET RESEARCH', x: 396, y: 66, w: 184, h: 92, kind: 'agent', stat: 'researching market', act: 'cursor' },
+  { id: 'handler', name: 'OPERATIONS MANAGER', plate: 'OPERATIONS MANAGER', x: 730, y: 78, w: 200, h: 96, kind: 'agent', stat: 'routing OP-4471', act: 'cursor', flag: true },
+  { id: 'medic', name: 'SUPPORT LEAD', plate: 'SUPPORT LEAD', x: 748, y: 300, w: 182, h: 92, kind: 'agent', stat: '2 tickets open', act: 'bars' },
+  { id: 'watch', name: 'INCIDENT RESPONSE', plate: 'INCIDENT RESPONSE', x: 738, y: 448, w: 192, h: 92, kind: 'agent', stat: 'systems nominal', act: 'cursor' },
   { id: 'inbox', name: 'INBOX', plate: 'YOUR BOX', x: 64, y: 430, w: 170, h: 110, kind: 'inbox' },
   { id: 'sales', name: '', plate: 'SALES · v2', x: 300, y: 452, w: 120, h: 74, kind: 'door' },
   { id: 'pm', name: '', plate: 'PM · v2', x: 470, y: 452, w: 120, h: 74, kind: 'door' },
