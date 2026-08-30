@@ -105,10 +105,37 @@ Every substantive change ships through a GitHub pull request reviewed by
   one add cleared another's pending state). All fixed; re-review **0 findings**.
 - **[#13 — Support on fresh `atlassian` connector + Disconnect button + chat error surfacing](https://github.com/productshiv/operationsos/pull/13)** —
   review returned **0 findings**.
+- **[#14 — Docs: Qodo review evidence brought current](https://github.com/productshiv/operationsos/pull/14)** —
+  documentation only; review returned **0 findings**.
+- **[#15 — Hide the undeletable dead `jira` connector, alias `atlassian` as jira](https://github.com/productshiv/operationsos/pull/15)** —
+  **2 findings** (both **Correctness**): the hidden `jira` still raised a warning, and the hide-rule
+  could globally suppress a *healthy* `jira`. Both fixed (hide is matched by name **and** URL and only
+  when a replacement is present); re-review **0 findings**.
+- **[#16 — Floor jukebox (playlist modal, paste-to-add, localStorage)](https://github.com/productshiv/operationsos/pull/16)** —
+  **6 findings** (3 High / 3 Medium, all Correctness/Reliability in the player): control commands raced
+  the YouTube player's readiness, the iframe URL forced autoplay on track change, removing the last
+  track kept playing, an empty playlist wasn't persisted, ids pulled from URLs skipped validation, and
+  track completion left a stale "playing" state. All fixed; re-review **0 findings**.
+- **[#17 — Wider chat + collapsible tool cards (+ restore dropped jukebox work)](https://github.com/productshiv/operationsos/pull/17)** —
+  **2 findings**: a claim that the oEmbed title fetch would be CORS-blocked — **dismissed with reasoning**
+  (verified 3× that YouTube's oEmbed endpoint reflects the `Origin` header and is CORS-enabled), answered
+  on the thread; and the jukebox widget overlapping the menu controls — **fixed** (responsive hide rules).
+- **[#18 — Quick-action tickets, missing-connector fix-it, think-strip, selectable text](https://github.com/productshiv/operationsos/pull/18)** —
+  **5 findings** (3 High / 2 Medium, Correctness/Reliability): the add-connector call sent placeholder
+  header values, OAuth connectors never resumed the turn, the OAuth pop-up was pop-up-blocked (opened
+  after an `await`), a retry kept the failed turn's partial output, and a quick action could target a
+  stale reply. All fixed; re-review **0 findings**.
+- **[#19 — Clearer roster + fix Analyst silence (drop Jira coupling)](https://github.com/productshiv/operationsos/pull/19)** —
+  **1 finding** (High, Correctness): the Operations Manager (then "Handler") told `create_sub_agent` to
+  delegate work, but dynamic sub-agents inherit the parent's (empty) toolset, so the delegates could do
+  nothing. Fixed by reframing it as a planner/router that routes each step to the specialist who holds
+  the tools; re-review **0 findings**.
+- **[#20 — Real job-title names across the floor](https://github.com/productshiv/operationsos/pull/20)** —
+  naming only; review returned **0 findings**.
 
-Across the first 13 PRs Qodo surfaced **27 findings** (including **2 security** issues); every one
-was fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
-findings passed a **follow-up review with 0 findings** before merge.
+Across all 20 PRs Qodo surfaced **43 findings** (including **2 security** issues); every one was
+fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
+actionable findings passed a **follow-up review with 0 findings** before merge.
 
 _Updated as each PR merges — what Qodo surfaced, and how it was resolved or, with reasoning, dismissed._
 

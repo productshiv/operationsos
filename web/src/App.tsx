@@ -8,7 +8,7 @@ import { useHarnessStatus } from './lib/useHarnessStatus';
 import { useConnectors } from './state/useConnectors';
 import { useModels } from './state/useModels';
 import { useJukebox } from './state/useJukebox';
-import { AGENT_MODEL } from './lib/agents';
+import { AGENT_MODEL, resolveJiraConnector } from './lib/agents';
 import './ui.css';
 
 export default function App() {
@@ -23,6 +23,11 @@ export default function App() {
   // list models is itself worth flagging, since we then can't confirm agents have a usable model.
   const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === AGENT_MODEL);
   const missingModel = !models.loading && !models.offline && !hasAgentModel;
+
+  // The live Jira connector (or null), for the agents' "Open a ticket" action. Derived from the same
+  // refreshable connector state as the setup panel, so adding/authorising Jira lights up ticketing
+  // without reopening. `undefined` while the first connector list is still loading.
+  const jira = connectors.loading ? undefined : resolveJiraConnector(connectors.connectors);
   const needsAttention =
     connectors.offline ||
     models.offline ||
@@ -33,7 +38,7 @@ export default function App() {
   return (
     <div className="app">
       <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} jukebox={jukebox} />
-      <Office />
+      <Office jira={jira} />
       <MusicEngine jb={jukebox} />
       <Ticker />
       {jukebox.open && <JukeboxModal jb={jukebox} onClose={() => jukebox.setOpen(false)} />}

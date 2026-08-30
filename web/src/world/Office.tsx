@@ -12,7 +12,7 @@ import { useCeo } from './useCeo';
  * within it, a prompt appears when a desk is in reach, and interacting (E / tap / click) opens
  * that desk's window.
  */
-export function Office() {
+export function Office({ jira }: { jira: string | null | undefined }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
   const ceoRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,7 @@ export function Office() {
         <span className="k">↑↓←→</span> / <span className="k">WASD</span> walk · <span className="k">E</span> interact
       </div>
 
-      {open && <DeskWindow desk={open} onClose={() => setOpenId(null)} />}
+      {open && <DeskWindow desk={open} jira={jira} onClose={() => setOpenId(null)} />}
     </div>
   );
 }
