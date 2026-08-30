@@ -124,7 +124,7 @@ export function JukeboxWidget({ jb }: { jb: Jukebox }) {
       </button>
       <button className="jb-open" onClick={() => jb.setOpen(true)} aria-label="Open jukebox">
         <span className={`jb-eq${jb.playing ? ' on' : ''}`} aria-hidden="true"><i /><i /><i /><i /></span>
-        <span className="jb-label">{jb.current ? jb.current.videoId : 'add music'}</span>
+        <span className="jb-label">{jb.current ? jb.current.title ?? jb.current.videoId : 'add music'}</span>
       </button>
     </div>
   );
@@ -174,7 +174,7 @@ export function JukeboxModal({ jb, onClose }: { jb: Jukebox; onClose: () => void
                     >
                       {cur && jb.playing ? '❚❚' : '▶'}
                     </button>
-                    <span className="jb-vid">{t.videoId}</span>
+                    <span className="jb-vid">{t.title ?? t.videoId}</span>
                     <button className="jb-x" onClick={() => jb.remove(t.id)} aria-label="Remove">×</button>
                   </div>
                 );
