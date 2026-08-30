@@ -382,7 +382,9 @@
 /* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */
 .prop {
   position: absolute;
-  z-index: 1;
+  /* Decorative: no z-index so DOM order keeps it behind the desks, and no pointer events so it never
+     intercepts a desk click. */
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -404,7 +406,9 @@
   opacity: 0.85;
 }
 .roamer {
-  z-index: 3;
+  /* Decorative: no z-index so DOM order keeps workers behind the desks (natural occlusion), and no
+     pointer events so a worker crossing a desk never intercepts its click. */
+  pointer-events: none;
   width: 20px;
   height: 28px;
   opacity: 0.82;
@@ -412,7 +416,10 @@
 .roamer .roamer-body {
   transform-origin: center bottom;
 }
+/* The second walk frame: force it to render (the global `.legB { display: none }` would otherwise
+   keep it hidden so opacity could never reveal it) and control visibility by opacity. */
 .roamer .legB {
+  display: block;
   opacity: 0;
 }
 .roamer.walk .legA {

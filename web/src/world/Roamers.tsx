@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { ROAMER_COUNT, WAYPOINTS } from './ambient';
 
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** Reactive prefers-reduced-motion — updates if the OS/browser setting changes while mounted. */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return reduced;
+}
 
 /** A small standing worker (walk cycle via the legA/legB swap). */
 function WorkerFigure() {
@@ -32,6 +43,7 @@ function WorkerFigure() {
  * Honours prefers-reduced-motion by standing still.
  */
 function Worker({ startIdx }: { startIdx: number }) {
+  const reduced = useReducedMotion();
   const [pos, setPos] = useState(() => WAYPOINTS[startIdx % WAYPOINTS.length]);
   const [walking, setWalking] = useState(false);
   const [flip, setFlip] = useState(false);
@@ -39,8 +51,13 @@ function Worker({ startIdx }: { startIdx: number }) {
   const posRef = useRef(pos);
   posRef.current = pos;
 
+  // Re-runs when the reduced-motion preference changes: under reduced motion the worker stands still
+  // (the effect returns early, and transitions are disabled below so any in-flight move stops too).
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    if (reduced) {
+      setWalking(false);
+      return;
+    }
     let alive = true;
     let arrive: number | undefined;
     let t = window.setTimeout(function loop() {
@@ -66,12 +83,16 @@ function Worker({ startIdx }: { startIdx: number }) {
       clearTimeout(t);
       if (arrive) clearTimeout(arrive);
     };
-  }, []);
+  }, [reduced]);
 
   return (
     <div
-      className={`sprite roamer${walking ? ' walk' : ''}`}
-      style={{ left: pos.x, top: pos.y, transition: `left ${dur}ms linear, top ${dur}ms linear` }}
+      className={`sprite roamer${walking && !reduced ? ' walk' : ''}`}
+      style={{
+        left: pos.x,
+        top: pos.y,
+        transition: reduced ? 'none' : `left ${dur}ms linear, top ${dur}ms linear`,
+      }}
     >
       <div className="shadow" />
       <div className="roamer-body" style={{ transform: flip ? 'scaleX(-1)' : 'none' }}>
