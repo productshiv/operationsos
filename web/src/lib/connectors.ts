@@ -1,5 +1,26 @@
 import { trueforgeControl } from './trueforge';
 
+/**
+ * Connectors that exist on the harness but must be hidden in the UI. This harness version has no
+ * delete-connector endpoint (TrueForge issue #494), so a connector whose OAuth (DCR) client got
+ * pinned to a stale redirect — `jira`, first authorised before PUBLIC_BASE_URL was set — can't be
+ * removed and would otherwise sit in the list forever showing a Connect that 500s. Drop these
+ * entries once upstream ships connector deletion.
+ */
+export const HIDDEN_CONNECTORS = new Set<string>(['jira']);
+
+/**
+ * UI display-name overrides. The working Jira/Confluence connector is named `atlassian` (a fresh
+ * name was the only way around the poisoned `jira` above); show it as "jira" so the floor reads
+ * naturally. The agent still targets the real `atlassian` name.
+ */
+const DISPLAY_ALIAS: Record<string, string> = { atlassian: 'jira' };
+
+/** The label to show for a connector — its alias if one is set, otherwise its real name. */
+export function connectorLabel(name: string): string {
+  return DISPLAY_ALIAS[name] ?? name;
+}
+
 export type ConnectorStatus = 'authenticated' | 'auth_required' | 'not_required';
 
 export interface Connector {
