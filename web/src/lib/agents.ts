@@ -137,28 +137,29 @@ const incident: AgentConfig = {
 };
 
 /**
- * Ops Coordinator — breaks a request down and delegates to specialists. It has no MCP connector, so
- * it always runs; it works through the harness's built-in sub-agent tool rather than a database or
- * ticketing tool of its own.
+ * Ops Coordinator — turns a situation into a routed plan. It has no MCP connector of its own (so it
+ * always runs) and it does not execute the work: it breaks a request into ordered steps and routes
+ * each to the specialist who actually has the tools. It deliberately does NOT spawn sub-agents,
+ * because dynamically created children inherit this agent's (empty) toolset and so couldn't act.
  */
 const coordinator: AgentConfig = {
   id: 'handler',
   name: 'Handler',
   role: 'Ops Coordinator',
-  blurb: 'Hand me a situation and I coordinate the response — breaking it into steps and delegating to the specialists (data, research, support) as needed.',
+  blurb: 'Hand me a situation and I turn it into a plan — which specialist to ask for each step, and in what order. I route the work; the specialists run it.',
   spec: {
     model: { name: AGENT_MODEL },
     instructions: [
-      'You are the Ops Coordinator. When given a situation, break it into steps and delegate each to a specialist sub-agent via create_sub_agent — a data analyst for numbers from the database, market research for the web, support for Jira tickets.',
-      'You do NOT have direct database or ticketing access yourself; you coordinate. Summarise what each specialist found and recommend clear next steps for the CEO.',
-      'Be concise and structured.',
+      'You are the Ops Coordinator. You do NOT have direct access to the database, the web, or Jira — the specialists do, and you route work to them.',
+      'When the CEO hands you a situation, break it into a clear, ordered plan and assign each step to the right specialist by name: the Data Analyst (business numbers from the database), Market Research (companies, markets, and competitors on the web), Support (read or file Jira tickets), and Incident Response (error spikes and incidents). For each step, say what to ask that specialist and why.',
+      'Do NOT invent data, results, or ticket ids, and do not claim to have run anything yourself — you plan and route; the specialists execute. Be concise and structured.',
     ].join(' '),
     config: { iterationLimit: 25 },
   },
   suggestions: [
-    'Coordinate a save for our biggest at-risk account',
-    'Investigate the latest incident end to end',
-    'Plan how we research and enter a new market',
+    'Plan a save for our biggest at-risk account',
+    'How should we investigate the latest incident?',
+    'Map out how we research and enter a new market',
   ],
 };
 
