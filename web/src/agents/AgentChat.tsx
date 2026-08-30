@@ -38,7 +38,7 @@ function Markdown({ text }: { text: string }) {
 }
 
 /** One tool call in the thread — collapsed to a one-line header by default, expandable for detail. */
-function ToolCard({ tool }: { tool: ToolActivity }) {
+function ToolCard({ tool, awaiting }: { tool: ToolActivity; awaiting?: boolean }) {
   const [open, setOpen] = useState(false);
   const hasDetail = !!(tool.query || tool.result);
   return (
@@ -51,7 +51,9 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
       >
         {hasDetail && <span className="toolchev" aria-hidden="true">{open ? '▾' : '▸'}</span>}
         <span className="tag8">{tool.server ? `${tool.server} · ${tool.tool}` : tool.tool}</span>
-        <span className={tool.result ? 'tok ok' : 'tok'}>{tool.result ? 'done' : 'running…'}</span>
+        <span className={tool.result ? 'tok ok' : 'tok'}>
+          {tool.result ? 'done' : awaiting ? 'waiting on you' : 'running…'}
+        </span>
       </button>
       {open && (
         <div className="toolbody">
@@ -82,7 +84,7 @@ export function AgentChat({
   // atlassian/jira naming difference is handled, and agents run on whichever model the CEO picked.
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
   const {
-    items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration, newChat,
+    items, busy, pending, needsConnector, turnError, hydrating, question, hydrationError, retryHydration, newChat,
     sessionServers, sessionId, openSession, send, decide, retry, clearNeedsConnector, clearTurnError,
   } = useAgentChat(spec, agent.id);
   const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
@@ -177,6 +179,32 @@ export function AgentChat({
     const sameDay = d.toDateString() === new Date().toDateString();
     return sameDay ? time : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
   };
+
+  /**
+   * What the agent is asking, pulled out of the pending ask_user_question call so the CEO can see the
+   * question and its options instead of a tool card that just says "running".
+   */
+  const asked = (() => {
+    if (!question) return null;
+    for (const it of items) {
+      const t = it.tools.find((x) => x.id === question.toolCallId);
+      if (!t?.input) continue;
+      try {
+        const a = JSON.parse(t.input) as Record<string, unknown>;
+        const text = (a.question ?? a.prompt ?? a.message) as string | undefined;
+        const raw = (a.options ?? a.choices) as unknown;
+        const options = Array.isArray(raw)
+          ? raw
+              .map((o) => (typeof o === 'string' ? o : ((o as { label?: string; value?: string })?.label ?? (o as { value?: string })?.value)))
+              .filter((o): o is string => typeof o === 'string' && !!o.trim())
+          : [];
+        return { text: text?.trim() || '', options };
+      } catch {
+        return { text: '', options: [] as string[] };
+      }
+    }
+    return { text: '', options: [] as string[] };
+  })();
 
   /** The other agents on the floor — who this one can pull into the conversation. */
   const colleagues = Object.values(AGENTS).filter((a) => a.id !== agent.id);
@@ -281,7 +309,7 @@ export function AgentChat({
           <div key={it.key} className={`msg ${it.role === 'user' ? 'me' : 'ag'}`}>
             {it.role === 'assistant' && <div className="who">{agent.name}</div>}
             {it.tools.map((t) => (
-              <ToolCard key={t.id} tool={t} />
+              <ToolCard key={t.id} tool={t} awaiting={t.id === question?.toolCallId} />
             ))}
             {it.text && (it.role === 'assistant'
               ? <Markdown text={it.text} />
@@ -378,6 +406,23 @@ export function AgentChat({
           </div>
         )}
       </div>
+
+      {question && !busy && (
+        <div className="fixcard">
+          <p>
+            <b>{agent.name}</b> is asking you something{asked?.text ? ':' : ' — answer below to continue.'}
+          </p>
+          {asked?.text && <p className="askq">{asked.text}</p>}
+          {asked?.options && asked.options.length > 0 && (
+            <div className="fixrow askopts">
+              {asked.options.map((o) => (
+                <button key={o} className="btn go" onClick={() => submit(o)}>{o}</button>
+              ))}
+            </div>
+          )}
+          {!asked?.options?.length && <p className="dim">Type your answer in the box below.</p>}
+        </div>
+      )}
 
       {(asking || consultNote) && (
         <div className="fixcard">

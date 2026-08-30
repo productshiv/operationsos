@@ -2403,3 +2403,13 @@ code {
   background: var(--gold);
   color: #15161a;
 }
+
+/* The agent asked the CEO something — show the question, not a spinning tool card. */
+.askq {
+  font-size: 13.5px;
+  line-height: 1.4;
+  margin: 0;
+}
+.askopts {
+  flex-wrap: wrap;
+}
