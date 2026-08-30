@@ -1022,6 +1022,30 @@ code {
 .typing {
   font-size: 12px;
 }
+/* One-click follow-up actions under a reply — gold, because they lead to a consequence. */
+.quickacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.qact {
+  border: 2px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  color: var(--ink);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.qact:hover {
+  background: color-mix(in srgb, var(--gold) 24%, transparent);
+}
+.qact:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 /* the gold authorisation gate, inline in the thread — the only colour */
 .approval {

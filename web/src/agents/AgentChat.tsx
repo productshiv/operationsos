@@ -92,6 +92,17 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
           </div>
         ))}
 
+        {/* One-click follow-up actions, offered once the agent has replied and is idle. */}
+        {agent.quickActions?.length && !busy && !pending && items.some((it) => it.role === 'assistant') ? (
+          <div className="quickacts">
+            {agent.quickActions.map((a) => (
+              <button key={a.label} className="qact" onClick={() => submit(a.prompt)}>
+                ⚡ {a.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {busy && !pending && <div className="typing muted">…thinking</div>}
 
         {pending && (
