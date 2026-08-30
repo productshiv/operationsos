@@ -2396,3 +2396,10 @@ code {
   padding: 10px;
   font-size: 12px;
 }
+
+/* Inbound work (complaints, error bursts) arrived on its own and nobody has looked at it — mark it
+   apart from routed tasks, which the CEO already authorised. */
+.deskbadge.inbound {
+  background: var(--gold);
+  color: #15161a;
+}

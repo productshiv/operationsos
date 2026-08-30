@@ -124,21 +124,35 @@ const support: AgentConfig = {
     model: { name: AGENT_MODEL },
     instructions: [
       'You are the Support Lead for a Weather API company. Ticketing is Jira — use the Jira tools (discover their fields if unsure).',
+      'Inbound customer complaints arrive in the business database, in public.oos_support_complaints (ts, customer_id, channel, subject, body, severity, status; status is open/triaged/closed). Read them with SELECT — discover the schema first (list_tables / information_schema) and never modify data.',
+      `The Supabase project ref is ${WEATHERAPI_PROJECT_REF} (WeatherAPI); always pass it as project_id.`,
+      'When asked to triage: pull the open complaints newest first, group them by what is actually going wrong, say which are urgent and why (severity, how many customers, whether it is billing or an outage), and draft the reply you would send. Join to public.oos_customers for who they are and what plan they are on, so the reply fits the account.',
       'Help summarise open tickets, spot what customers are hitting, and draft replies.',
       'When asked to open or file a ticket, draft it (a clear summary and a description) and then call the Jira create tool directly in that turn. The harness automatically pauses for the CEO to authorise before the issue is created, so create it rather than asking permission again in text.',
       'Be concise.',
     ].join(' '),
     // Jira is this agent's whole job, so it's preloaded (added at runtime by buildAgentSpec).
-    mcpServers: [],
+    // Supabase too, read-only: complaints land in the business database, and a support agent that
+    // can't see its own inbox can only ever talk about tickets someone else already filed.
+    mcpServers: [
+      { name: 'supabase', enableTools: ['execute_sql', 'list_tables', 'list_projects', 'get_project'], preload: true },
+    ],
     config: { iterationLimit: 25 },
   },
   ticketing: 'preload',
   suggestions: [
-    'Summarise our open tickets',
+    'Triage the open complaints',
     'What are customers running into?',
-    'Draft a ticket for the /v1/forecast incident',
+    'Draft a reply for the newest high-severity complaint',
   ],
-  quickActions: [OPEN_TICKET_ACTION],
+  quickActions: [
+    {
+      label: 'Triage complaints',
+      prompt:
+        'Pull the open rows from public.oos_support_complaints (newest first), group them by what is actually going wrong, tell me which need action first and why, and draft the reply for the most urgent one.',
+    },
+    OPEN_TICKET_ACTION,
+  ],
 };
 
 /** Incident Response — watches error spikes and quantifies incidents (read-only). */
@@ -154,6 +168,7 @@ const incident: AgentConfig = {
       'Discover the schema (list_tables / information_schema) then run read-only SELECT only — never modify data.',
       `The Supabase project ref is ${WEATHERAPI_PROJECT_REF} (WeatherAPI); always pass it as project_id.`,
       'Watch for error spikes by endpoint and day, quantify them (events, affected customers), and name the likely cause. Lead with the key number.',
+      'Then prepare the response, do not stop at the diagnosis. For 429 / rate-limit spikes: look up the affected customers in public.oos_customers and their limits in public.oos_pricing, and say plainly whether this is a customer calling wrongly (recommend the correct pattern — caching, backoff, batching, the right endpoint) or a customer who has genuinely outgrown their plan (recommend the upgrade, with the tier and price). For 5xx spikes: say what is failing, who it hit, and what we tell them while we fix it. Draft the customer-facing message, ready to send.',
       TICKET_INSTRUCTION,
     ].join(' '),
     mcpServers: [
@@ -164,10 +179,17 @@ const incident: AgentConfig = {
   ticketing: 'defer',
   suggestions: [
     'Any incident in the last week?',
-    'Which endpoint is erroring most?',
-    'How many customers did the last spike hit?',
+    'Who is hitting rate limits, and should they upgrade?',
+    'Draft what we tell customers about the latest spike',
   ],
-  quickActions: [OPEN_TICKET_ACTION],
+  quickActions: [
+    {
+      label: 'Prepare the response',
+      prompt:
+        'Find the latest error spike in public.oos_error_events. Quantify it, name the likely cause, and prepare what we send the affected customers — for 429s say whether each should change how they call us or upgrade (name the tier and price from public.oos_pricing), and draft the message.',
+    },
+    OPEN_TICKET_ACTION,
+  ],
 };
 
 /**
