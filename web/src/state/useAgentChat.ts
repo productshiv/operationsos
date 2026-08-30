@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
-import { fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
+import { abandonSession, fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
 
 export interface ToolActivity {
   id: string;
@@ -387,6 +387,32 @@ export function useAgentChat(spec: Record<string, unknown>) {
   /** Re-run the restore after a transient lookup/history failure. */
   const retryHydration = useCallback(() => setHydrateNonce((n) => n + 1), []);
 
+  /**
+   * Start a fresh conversation: clear the transcript and drop the session id, so the next message
+   * opens a NEW server session and the current (e.g. error-filled) one is left behind. Note the
+   * abandoned session still exists server-side; once the new session gets its first turn it becomes
+   * the most-recently-updated one and is what future reopens restore.
+   */
+  const newChat = useCallback(() => {
+    // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
+    // before the replacement gets its first turn.
+    if (sessionRef.current) abandonSession(sessionRef.current);
+    orderRef.current = [];
+    basesRef.current.clear();
+    userTextRef.current.clear();
+    toolResultRef.current.clear();
+    sessionRef.current = null;
+    counterRef.current = 0;
+    lastUserRef.current = '';
+    setItems([]);
+    setPending(null);
+    setNeedsConnector(null);
+    setTurnError(null);
+    setSessionServers(null);
+    setHydrationError(false);
+    setHydrating(false);
+  }, []);
+
   const send = useCallback(
     async (text: string) => {
       const t = text.trim();
@@ -464,6 +490,8 @@ export function useAgentChat(spec: Record<string, unknown>) {
     /** True when restoring failed (lookup/history error) — composer stays disabled, offer Retry. */
     hydrationError,
     retryHydration,
+    /** Start a fresh conversation (clears the transcript and the session). */
+    newChat,
     /** MCP server names the live session was created with, or null before the first turn. */
     sessionServers,
     send,

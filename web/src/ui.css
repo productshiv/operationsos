@@ -713,6 +713,52 @@ code {
   margin: 0;
 }
 
+/* ---------------- MODEL PROVIDERS (grouped + picker) ---------------- */
+.prov {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.prov-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.prov-name {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.prov-picker {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 34vh;
+  overflow: auto;
+}
+.prov-tile {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--sh);
+  text-align: left;
+  font-size: 13px;
+  min-width: 0;
+}
+.prov-tile:hover {
+  background: var(--sink);
+}
+.prov-tile:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
 /* ---------------- CONNECTOR CATALOG (one-click) ---------------- */
 .cat-grid {
   display: grid;
@@ -853,6 +899,12 @@ code {
 }
 .aghead .agname {
   font-size: 15px;
+}
+.aghead-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 .chatlog {
   flex: 1 1 auto;
