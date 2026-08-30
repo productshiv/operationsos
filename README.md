@@ -74,6 +74,41 @@ Every substantive change ships through a GitHub pull request reviewed by
   facing transform mirroring the "YOU" label, movement keys latching after focus loss, and a UTC
   clock). All five were fixed, each thread answered, and Qodo's **follow-up review returned 0
   findings**.
+- **[#3 — Connect-tools setup wired to real MCP connectors](https://github.com/productshiv/operationsos/pull/3)** —
+  **4 findings**: the connector scan could hang for the full 10-minute streaming timeout, the OAuth
+  pop-up opened after an `await` (so blockers killed it), the auth re-list ran prematurely, and
+  authorization failures escaped handling. All fixed; re-review **0 findings**.
+- **[#4 — Data Analyst: chat, schema discovery, approval-gated SQL](https://github.com/productshiv/operationsos/pull/4)** —
+  **4 findings** including a **Security** one (the pinned Supabase project wasn't enforced at the
+  gate): approval used the wrong tool-call id, the gate still let new turns start, a failed approval
+  lost the checkpoint, and the project pin was unenforced. All fixed; re-review **0 findings**.
+- **[#5 — Support (Jira), Incident, Research agents](https://github.com/productshiv/operationsos/pull/5)** —
+  **2 findings** including a **Security** one (Jira approvals hid the payload the tool would send)
+  plus analyst-specific guidance leaking onto the new agents. Fixed; re-review **0 findings**.
+- **[#6 — Coolify deploy (harness + frontend, /tf proxy)](https://github.com/productshiv/operationsos/pull/6)** —
+  **2 findings** (nginx root could serve the wrong app; the production client surfaced a `localhost`
+  URL on proxy errors). Fixed; re-review **0 findings**.
+- **[#7 — Pin internal Postgres creds](https://github.com/productshiv/operationsos/pull/7)** —
+  **2 findings** (pinned creds vs a pre-existing volume; a stale local-test instruction). Documented
+  the volume-migration path and corrected the docs; re-review **0 findings**.
+- **[#8 — Stop publishing the web host port on Coolify](https://github.com/productshiv/operationsos/pull/8)** —
+  review returned **0 findings**.
+- **[#9 — Native in-app model + connector setup](https://github.com/productshiv/operationsos/pull/9)** —
+  **3 findings** (readiness cleared on an unrelated model, a single-endpoint fault hid both sections,
+  and `models.offline` was missing from the attention check). All fixed; re-review **0 findings**.
+- **[#10 — Re-resolve the harness per request (502 fix)](https://github.com/productshiv/operationsos/pull/10)** —
+  review returned **0 findings**.
+- **[#11 — Don't drive the avatar while typing in a field](https://github.com/productshiv/operationsos/pull/11)** —
+  review returned **0 findings**.
+- **[#12 — One-click connector catalog + trimmed copy](https://github.com/productshiv/operationsos/pull/12)** —
+  **3 findings** (only the first auth header was submitted, catalog add-failures were invisible, and
+  one add cleared another's pending state). All fixed; re-review **0 findings**.
+- **[#13 — Support on fresh `atlassian` connector + Disconnect button + chat error surfacing](https://github.com/productshiv/operationsos/pull/13)** —
+  review returned **0 findings**.
+
+Across the first 13 PRs Qodo surfaced **27 findings** (including **2 security** issues); every one
+was fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
+findings passed a **follow-up review with 0 findings** before merge.
 
 _Updated as each PR merges — what Qodo surfaced, and how it was resolved or, with reasoning, dismissed._
 
