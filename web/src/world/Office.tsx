@@ -3,12 +3,14 @@ import { DESKS } from './desks';
 import { PROPS } from './ambient';
 import { Desk } from './Desk';
 import { Prop } from './Prop';
-import { Roamers } from './Roamers';
+import { AgentRoamers } from './AgentRoamers';
 import { Ceo } from './Ceo';
 import { TouchPad } from './TouchPad';
 import { DeskWindow } from './DeskWindow';
+import { AttentionPanel } from './AttentionPanel';
 import { useCamera } from './useCamera';
 import { useCeo } from './useCeo';
+import { useAttention, useOpenTasks } from '../state/tasks';
 
 /**
  * The walkable floor. The world is a fixed-size plane scaled to fit the viewport; the CEO moves
@@ -20,6 +22,12 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
   const worldRef = useRef<HTMLDivElement>(null);
   const ceoRef = useRef<HTMLDivElement>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const attention = useAttention();
+  const openTasks = useOpenTasks();
+  // The board badge shows whenever there's anything on it (things needing you + active tasks), so the
+  // board stays reachable; it only "pulses" (urgent) when an agent is actually waiting on your sign-off.
+  const boardCount = attention.length + openTasks.length;
 
   useCamera(viewportRef, worldRef);
   const { nearId, press, release } = useCeo(ceoRef, setOpenId);
@@ -32,15 +40,21 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
     <div className="viewport" ref={viewportRef}>
       <div className="world" ref={worldRef}>
         <div className="rug" />
-        {/* Ambient life — props and wandering workers, behind the desks and the CEO. */}
+        {/* Ambient life — props, and the agents who occasionally step out to them (and return when
+            you walk up to their desk). Behind the desks and the CEO. */}
         {PROPS.map((p) => (
           <Prop key={p.id} prop={p} />
         ))}
-        <Roamers />
+        <AgentRoamers nearId={nearId} />
         {DESKS.map((desk) => (
           <Desk key={desk.id} desk={desk} onOpen={setOpenId} />
         ))}
-        <Ceo ref={ceoRef} />
+        <Ceo
+          ref={ceoRef}
+          count={boardCount}
+          urgent={attention.length > 0}
+          onAttention={() => setBoardOpen(true)}
+        />
         {near && (
           <div className="prompt on" style={{ left: near.x + near.w / 2, top: near.y - 6 }}>
             <span className="k">E</span>
@@ -57,6 +71,16 @@ export function Office({ jira, agentModel }: { jira: string | null | undefined; 
 
       {open && (
         <DeskWindow desk={open} jira={jira} agentModel={agentModel} onClose={() => setOpenId(null)} />
+      )}
+
+      {boardOpen && (
+        <AttentionPanel
+          onClose={() => setBoardOpen(false)}
+          onGoto={(id) => {
+            setBoardOpen(false);
+            setOpenId(id);
+          }}
+        />
       )}
     </div>
   );

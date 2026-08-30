@@ -24,7 +24,7 @@ export const PROPS: FloorProp[] = [
   { id: 'cube', kind: 'cube', x: 120, y: 300, label: 'v2' },
 ];
 
-/** Open floor points the roamers walk between (near props + a few corridor spots). */
+/** Open floor points an agent strolls to when stepping out (near props + a few corridor spots). */
 export const WAYPOINTS: Array<{ x: number; y: number }> = [
   { x: 612, y: 140 }, // by the coffee machine
   { x: 300, y: 150 }, // by the water cooler
@@ -35,6 +35,3 @@ export const WAYPOINTS: Array<{ x: number; y: number }> = [
   { x: 250, y: 250 },
   { x: 470, y: 175 },
 ];
-
-/** How many workers wander the floor. Kept low so it stays calm, not busy. */
-export const ROAMER_COUNT = 3;

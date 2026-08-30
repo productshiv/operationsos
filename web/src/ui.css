@@ -379,6 +379,147 @@
   display: block;
 }
 
+/* ---------------- TASK / ATTENTION BADGES + BOARD ---------------- */
+.deskbadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0 var(--sh);
+  z-index: 2;
+}
+.youbadge {
+  position: absolute;
+  top: -16px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--sh);
+  z-index: 9;
+}
+/* Calm when it's just tasks; pulse only when an agent is actually waiting on your sign-off. */
+.youbadge:not(.urgent) {
+  background: var(--panel);
+}
+.youbadge.urgent {
+  animation: youpulse 1.4s ease-in-out infinite;
+}
+@keyframes youpulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.win.board {
+  width: min(560px, 94vw);
+}
+.board-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.board-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.board-head {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--sh);
+  text-align: left;
+}
+.board-row:hover {
+  background: var(--sink);
+}
+.board-row:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.board-row-name {
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-task {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.board-row-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--sh);
+  text-align: left;
+}
+.board-row-open:hover {
+  background: var(--sink);
+}
+.board-done {
+  flex: 0 0 auto;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 8px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--sh);
+}
+.board-done:hover {
+  background: var(--sink);
+}
+.board-done:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
 /* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */
 .prop {
   position: absolute;
@@ -414,7 +555,31 @@
   opacity: 0.82;
 }
 .roamer .roamer-body {
+  position: relative;
   transform-origin: center bottom;
+}
+/* The agent's initials, floating above the walking avatar. */
+.roamer-tag {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  transform: translateX(-50%);
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 0 2px;
+  white-space: nowrap;
+}
+/* An empty chair placeholder shown at a desk while its agent is away, so the seat doesn't collapse. */
+.seat-empty {
+  width: 30px;
+  height: 24px;
+  border-bottom: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+  opacity: 0.3;
 }
 /* The second walk frame: force it to render (the global `.legB { display: none }` would otherwise
    keep it hidden so opacity could never reveal it) and control visibility by opacity. */

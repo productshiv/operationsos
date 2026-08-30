@@ -139,8 +139,26 @@ Every substantive change ships through a GitHub pull request reviewed by
   it); and Jira availability was a one-time snapshot that never refreshed. Fixed by making a post-accept
   failure a passive note (no write-duplicating retry), binding the action to the session's own frozen
   spec, and moving Jira resolution onto the app's shared, refreshable connector state; re-review **0 findings**.
+- **[#22 — Persist conversations across reload/reopen (harness-backed, cross-device)](https://github.com/productshiv/operationsos/pull/22)** —
+  **5 findings** (2 High / 3 Medium, Correctness/Reliability) hardening the new restore path: a session
+  reopened mid-gate didn't restore its pending approval; a session created before Jira resolved was
+  reused even once Jira was available; the lookup only scanned recent sessions; and a lookup/history
+  **failure** was indistinguishable from an empty session (forking the conversation or attaching a
+  blank-but-live one). Fixed by rebuilding the pending gate from the turn's `requiredActions`, adding
+  the connector set to the session identity, and returning discriminated found/none/error results with
+  a Retry; re-review **0 findings**.
+- **[#23 — New chat (clear a piled-up thread) + provider upsert to fix a 404'd model](https://github.com/productshiv/operationsos/pull/23)** —
+  **1 finding** (Medium, Correctness): "New chat" only cleared local state, so a remount/reload
+  re-restored the abandoned session. Fixed with a per-browser blocklist of abandoned session ids that
+  the lookup skips; re-review **0 findings**.
+- **[#24 — Ambient floor life (props + roaming workers)](https://github.com/productshiv/operationsos/pull/24)** —
+  **3 findings** (2 High / 1 Medium, Correctness): the walk cycle's second frame was hidden by a global
+  `display:none`; roamers had a positive z-index and intercepted desk clicks while crossing them; and
+  `prefers-reduced-motion` was read only once. Fixed by rendering the second frame, making roamers
+  `pointer-events:none` behind the desks, and subscribing to the motion-preference media query;
+  re-review **0 findings**.
 
-Across all 21 PRs Qodo surfaced **46 findings** (including **2 security** issues); every one was
+Across all 24 PRs Qodo surfaced **55 findings** (including **2 security** issues); every one was
 fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
 actionable findings passed a **follow-up review with 0 findings** before merge.
 

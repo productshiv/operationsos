@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
 import { abandonSession, fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
+import { addTask, clearAttention, setAttention } from './tasks';
 
 export interface ToolActivity {
   id: string;
@@ -122,7 +123,26 @@ function friendlyError(message: string): string {
   return message;
 }
 
-export function useAgentChat(spec: Record<string, unknown>) {
+/** A tool call is a Jira *issue* creation — used to route a follow-up task when it's authorised. The
+ *  tool must start with "create" and END with "issue", so createJiraIssue/createIssue qualify but
+ *  createIssueLink (a link, not a new ticket) and createPage (Confluence) do not. */
+function isTicketCreate(tool: string): boolean {
+  return /^create/i.test(tool) && /issue$/i.test(tool);
+}
+/** Pull a human title out of a create-issue tool's arguments (summary field), if present. */
+function ticketTitle(input?: string): string {
+  if (!input) return 'New ticket';
+  try {
+    const a = JSON.parse(input) as Record<string, unknown>;
+    const fields = (a.fields ?? a) as Record<string, unknown>;
+    const summary = (fields.summary ?? a.summary ?? a.title) as string | undefined;
+    return summary?.trim() || 'New ticket';
+  } catch {
+    return 'New ticket';
+  }
+}
+
+export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -384,6 +404,15 @@ export function useAgentChat(spec: Record<string, unknown>) {
     };
   }, [instructions, modelName, serverKey, rebuild, hydrateNonce]);
 
+  // Flag on the floor's board when this agent is waiting on the CEO (a paused approval gate), so the
+  // "YOU" badge reflects it. Only SET here — never clear on a null `pending`, because during hydration
+  // pending is momentarily null (and stays null if a restore fails), and clearing then would wipe a
+  // real, still-unresolved approval from the board. Attention is cleared where it's actually resolved:
+  // in decide() (authorise/deny) and newChat().
+  useEffect(() => {
+    if (pending) setAttention(agentId, pending.toolCalls[0]?.tool ?? 'a tool');
+  }, [pending, agentId]);
+
   /** Re-run the restore after a transient lookup/history failure. */
   const retryHydration = useCallback(() => setHydrateNonce((n) => n + 1), []);
 
@@ -397,6 +426,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
     // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
     // before the replacement gets its first turn.
     if (sessionRef.current) abandonSession(sessionRef.current);
+    clearAttention(agentId); // starting fresh — no longer waiting on the CEO
     orderRef.current = [];
     basesRef.current.clear();
     userTextRef.current.clear();
@@ -411,7 +441,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
     setSessionServers(null);
     setHydrationError(false);
     setHydrating(false);
-  }, []);
+  }, [agentId]);
 
   const send = useCallback(
     async (text: string) => {
@@ -463,6 +493,15 @@ export function useAgentChat(spec: Record<string, unknown>) {
       // The harness accepted the decision — close the gate now so the reply streams in its place,
       // instead of the gold card lingering on screen while the response is still being generated.
       setPending((cur) => (cur === resolving ? null : cur));
+      clearAttention(agentId); // the CEO has acted on this gate — no longer waiting on you
+      // An authorised ticket becomes a routed task for the Operations Manager to coordinate.
+      if (status === 'allow') {
+        for (const tc of resolving.toolCalls) {
+          if (isTicketCreate(tc.tool)) {
+            addTask({ title: ticketTitle(tc.input), createdBy: agentId, assignedTo: 'handler' });
+          }
+        }
+      }
       turnStartRef.current = orderRef.current.length;
       try {
         await consume(stream as never);
