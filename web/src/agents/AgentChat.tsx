@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
+import { useJiraConnector } from '../state/useJiraConnector';
 import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
-import type { AgentConfig } from '../lib/agents';
+import { buildAgentSpec, type AgentConfig } from '../lib/agents';
 
 /** Strip minimax's internal reasoning tags (`<mm:think>…</mm:think>`) — including an unclosed one
  *  mid-stream — so they never leak into the visible reply. */
@@ -61,8 +62,14 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * touch the database until you authorise.
  */
 export function AgentChat({ agent }: { agent: AgentConfig }) {
+  // Resolve the harness's Jira connector once and inject it into the spec at runtime, so a missing or
+  // renamed Jira never breaks this agent's normal answers and the ticket action only shows when it can
+  // actually file one. `undefined` while still loading.
+  const jira = useJiraConnector();
+  const spec = useMemo(() => buildAgentSpec(agent, jira ?? null), [agent, jira]);
+  const canTicket = !!jira;
   const { items, busy, pending, needsConnector, turnError, send, decide, retry, clearNeedsConnector, clearTurnError } =
-    useAgentChat(agent.spec);
+    useAgentChat(spec);
   const [draft, setDraft] = useState('');
   const [fixing, setFixing] = useState(false);
   const [fixErr, setFixErr] = useState<string | null>(null);
@@ -139,8 +146,10 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
         ))}
 
         {/* Follow-up actions, only when the latest reply actually succeeded — never next to an error
-            or a connector-recovery prompt, so they can't act on a stale, unrelated reply. */}
+            or a connector-recovery prompt, so they can't act on a stale, unrelated reply. The ticket
+            action is gated on a Jira connector actually being available. */}
         {agent.quickActions?.length &&
+        canTicket &&
         !busy &&
         !pending &&
         !turnError &&

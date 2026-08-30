@@ -309,8 +309,9 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const decide = useCallback(
     async (status: 'allow' | 'deny') => {
       if (!pending || busy || !sessionRef.current) return;
-      const resolving = pending; // keep it until the resume is accepted, so failures can retry
+      const resolving = pending; // keep it until the harness accepts the decision, so a send failure can retry
       setBusy(true);
+      let stream: unknown;
       try {
         const input = resolving.toolCalls.map((tc) => ({
           type: 'user.tool_approval',
@@ -318,14 +319,25 @@ export function useAgentChat(spec: Record<string, unknown>) {
           toolCallId: tc.id,
           approval: status === 'allow' ? { status: 'allow' } : { status: 'deny' },
         }));
-        const stream = await trueforge.sessions.createTurnStream(sessionRef.current, {
+        stream = await trueforge.sessions.createTurnStream(sessionRef.current, {
           input: input as never,
         });
-        await consume(stream as never);
-        // Clear only if the resume didn't raise a fresh checkpoint.
-        setPending((cur) => (cur === resolving ? null : cur));
       } catch (e) {
+        // The decision never reached the harness — the checkpoint is still open, so keep the gate up.
         note(`⚠ ${(e as Error).message} — the checkpoint is still open; try again.`);
+        setBusy(false);
+        return;
+      }
+      // The harness accepted the decision — close the gate now so the reply streams in its place,
+      // instead of the gold card lingering on screen while the response is still being generated.
+      setPending((cur) => (cur === resolving ? null : cur));
+      turnStartRef.current = orderRef.current.length;
+      try {
+        await consume(stream as never);
+      } catch (e) {
+        truncateTurn(); // drop partial output from the failed resume
+        rebuild();
+        setTurnError(friendlyError((e as Error).message ?? String(e)));
       } finally {
         setBusy(false);
       }
