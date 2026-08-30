@@ -24,11 +24,13 @@ function toggleTheme() {
 export function MenuBar({
   conn,
   onManage,
+  onInfo,
   attention,
   jukebox,
 }: {
   conn: ConnectionState;
   onManage?: () => void;
+  onInfo?: (kind: 'architecture' | 'roadmap') => void;
   attention?: boolean;
   jukebox: Jukebox;
 }) {
@@ -47,6 +49,13 @@ export function MenuBar({
       <span className="m">View</span>
       <JukeboxWidget jb={jukebox} />
       <div className="spread">
+        {/* How the system fits together, and where it's going — reference, always one click away. */}
+        <button className="m m-btn" onClick={() => onInfo?.('architecture')} title="How OperationsOS works">
+          architecture
+        </button>
+        <button className="m m-btn" onClick={() => onInfo?.('roadmap')} title="What's shipped and what's next">
+          roadmap
+        </button>
         <span className={`hstatus hstatus--${conn}`}>harness: {conn}</span>
         <span className="clock chi">{clock}</span>
         <button className="iconbtn" onClick={toggleTheme} title="Day / night shift" aria-label="Toggle day / night shift">

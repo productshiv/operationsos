@@ -2176,3 +2176,121 @@ code {
   justify-content: space-between;
   gap: 10px;
 }
+
+/* ---------------- ARCHITECTURE / ROADMAP WINDOWS ---------------- */
+.win.infowin {
+  width: min(680px, 94vw);
+}
+.infobody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.info-lede {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* The stack: each layer a box, arrows between them. */
+.archstack {
+  display: flex;
+  flex-direction: column;
+}
+.archwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.archbox {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 3px 3px 0 var(--sh);
+  padding: 9px 11px;
+}
+/* The gate is the point of the whole product — mark it. */
+.archbox.gate {
+  border-color: var(--gold);
+  box-shadow: 3px 3px 0 var(--sh), inset 0 0 0 2px var(--gold);
+}
+.archhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.archtitle {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+.archsub {
+  font-size: 11px;
+}
+.archlist {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.archlist li {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.archarrow {
+  align-self: center;
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 0;
+  opacity: 0.55;
+}
+
+/* Roadmap rows. */
+.roadlist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.roaditem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 8px 10px;
+  box-shadow: 3px 3px 0 var(--sh);
+}
+.roaditem.road-done {
+  opacity: 0.72; /* shipped: present but quieter than what's coming */
+}
+.roadmark {
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  flex: 0 0 auto;
+  width: 12px;
+  text-align: center;
+}
+.roadtext {
+  flex: 1;
+  min-width: 0;
+}
+.roadtitle {
+  font-size: 13px;
+}
+.roaddetail {
+  font-size: 11.5px;
+  line-height: 1.35;
+  margin-top: 1px;
+}
+.roadtag {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.roaditem.road-next .roadtag {
+  background: var(--gold);
+  color: #15161a;
+}
