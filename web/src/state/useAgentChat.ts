@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
-import { abandonSession, fetchHistory, findAgentSession, unabandonSession, type RawToolCallLike } from '../lib/sessionHistory';
+import {
+  abandonSession, clearPin, fetchHistory, findAgentSession, pinSession, readPin, specFingerprint,
+  unabandonSession, type RawToolCallLike,
+} from '../lib/sessionHistory';
 import { addTask, clearAttention, setAttention } from './tasks';
 
 export interface ToolActivity {
@@ -165,8 +168,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   const [hydrationError, setHydrationError] = useState(false);
   // Bumped by retryHydration()/openSession() to re-run the restore effect.
   const [hydrateNonce, setHydrateNonce] = useState(0);
-  // When the CEO picks a specific past conversation, restore THAT one instead of the newest match.
-  const forcedSessionRef = useRef<string | null>(null);
+
 
   const sessionRef = useRef<string | null>(null);
   // The MCP server names the live session was actually created with — frozen at creation, since the
@@ -379,15 +381,22 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     setSessionServers(null);
     setHydrationError(false);
     setHydrating(true);
+    // This is a different conversation, so nothing from the last one may leak across: a stale
+    // "Try again" would otherwise replay the previous chat's message into this session.
+    setTurnError(null);
+    setNeedsConnector(null);
+    lastUserRef.current = '';
     void (async () => {
       if (!instructions || !modelName) {
         if (!cancelled) setHydrating(false);
         return;
       }
       const serverNames = serverKey ? serverKey.split(',') : [];
-      const forced = forcedSessionRef.current;
-      const look = forced
-        ? ({ status: 'found', session: { id: forced, mcpServers: serverNames } } as const)
+      // A pin only applies to the spec it was made under, so when it matches, this session really
+      // was created with these connectors — labelling it with them is correct.
+      const pinned = readPin(agentId, specFingerprint(instructions, modelName, serverNames));
+      const look = pinned
+        ? ({ status: 'found', session: { id: pinned, mcpServers: serverNames } } as const)
         : await findAgentSession(instructions, modelName, serverNames);
       if (cancelled) return;
       if (look.status === 'error') {
@@ -457,11 +466,15 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
    * Reopen one of this agent's past conversations. Picking it explicitly also un-abandons it, so it
    * becomes the live thread again rather than being skipped on the next open.
    */
-  const openSession = useCallback((id: string) => {
-    unabandonSession(id);
-    forcedSessionRef.current = id;
-    setHydrateNonce((n) => n + 1);
-  }, []);
+  const openSession = useCallback(
+    (id: string) => {
+      unabandonSession(id);
+      // Persisted, so reopening the desk returns to the chat the CEO chose rather than the newest one.
+      pinSession(agentId, id, specFingerprint(instructions, modelName, serverKey ? serverKey.split(',') : []));
+      setHydrateNonce((n) => n + 1);
+    },
+    [agentId, instructions, modelName, serverKey],
+  );
 
   /**
    * Start a fresh conversation: clear the transcript and drop the session id, so the next message
@@ -473,7 +486,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
     // before the replacement gets its first turn.
     if (sessionRef.current) abandonSession(sessionRef.current);
-    forcedSessionRef.current = null; // a fresh thread, not a pinned past one
+    clearPin(agentId); // a fresh thread, not the pinned past one
     clearAttention(agentId); // starting fresh — no longer waiting on the CEO
     orderRef.current = [];
     basesRef.current.clear();
