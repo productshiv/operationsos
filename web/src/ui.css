@@ -769,33 +769,92 @@
 .barshelf i.tall {
   height: 17px;
 }
-/* The bartender works behind the counter, sliding along it and shaking a drink. */
+/* The bartender works behind the counter. Position is driven in React (he slides between stops);
+   these rules animate what his hands are doing in each phase of the routine. */
 .bartender {
   position: absolute;
-  left: 340px;
+  left: 336px;
   top: 220px;
-  width: 20px;
+  width: 30px;
   height: 28px;
   pointer-events: none;
-  animation: tendbar 9s ease-in-out infinite alternate;
-}
-@keyframes tendbar {
-  0%   { transform: translateX(0) scaleX(1); }
-  49%  { transform: translateX(280px) scaleX(1); }
-  50%  { transform: translateX(280px) scaleX(-1); }
-  100% { transform: translateX(0) scaleX(-1); }
 }
 .bartender-body {
   position: relative;
 }
-.bartender .shakeArm {
+/* The glasses and pour stream only appear when he's actually using them. */
+.bartender .glasses {
+  opacity: 0;
+}
+.bartender.phase-pour .glasses,
+.bartender.phase-shake .glasses,
+.bartender.phase-flair .glasses {
+  opacity: 1;
+}
+.bartender .pourStream {
+  opacity: 0;
+}
+
+/* shake — the shaker rattles up and down */
+.bartender.phase-shake .shakeArm {
   transform-origin: 16px 14px;
-  animation: shakeit 0.28s steps(2) infinite;
+  animation: barShake 0.26s steps(2) infinite;
 }
-@keyframes shakeit {
-  0%   { transform: rotate(-16deg) translateY(0); }
-  100% { transform: rotate(10deg) translateY(-2px); }
+@keyframes barShake {
+  0%   { transform: rotate(-18deg) translateY(0); }
+  100% { transform: rotate(8deg) translateY(-3px); }
 }
+
+/* pour — tip the shaker over the glasses, stream running */
+.bartender.phase-pour .shakeArm {
+  transform-origin: 16px 14px;
+  animation: barPour 1.9s ease-in-out forwards;
+}
+@keyframes barPour {
+  0%   { transform: rotate(0deg) translateX(0); }
+  25%  { transform: rotate(58deg) translateX(5px); }
+  80%  { transform: rotate(58deg) translateX(5px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+.bartender.phase-pour .pourStream {
+  animation: barStream 1.9s steps(1) forwards;
+}
+@keyframes barStream {
+  0%, 20%   { opacity: 0; }
+  25%, 78%  { opacity: 1; }
+  85%, 100% { opacity: 0; }
+}
+
+/* flair — toss the shaker up, spin it, catch it */
+.bartender.phase-flair .shaker {
+  transform-origin: 17px 9px;
+  animation: barToss 1.9s ease-in-out infinite;
+}
+@keyframes barToss {
+  0%   { transform: translateY(0) rotate(0deg); }
+  35%  { transform: translateY(-13px) rotate(180deg); }
+  55%  { transform: translateY(-15px) rotate(360deg); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+.bartender.phase-flair .shakeArm {
+  transform-origin: 16px 14px;
+  animation: barCatch 1.9s ease-in-out infinite;
+}
+@keyframes barCatch {
+  0%, 100% { transform: rotate(0deg); }
+  45%      { transform: rotate(-26deg); }
+}
+
+/* wipe — the other hand polishes the counter */
+.bartender.phase-wipe .wipeArm {
+  transform-origin: 4px 12px;
+  animation: barWipe 0.6s ease-in-out infinite alternate;
+}
+@keyframes barWipe {
+  0%   { transform: translateX(-1px) rotate(6deg); }
+  100% { transform: translateX(5px) rotate(30deg); }
+}
+
 /* The counter sits in front of the bartender, so their lower half is hidden behind it. */
 .barcounter {
   position: absolute;

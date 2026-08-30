@@ -92,32 +92,90 @@ function Partygoer({
   );
 }
 
-/** The bartender, working the counter — slides along behind the bar, shaking a drink. */
+/** What the bartender is doing right now, and how long each bit lasts (ms). */
+const BAR_ROUTINE = [
+  { phase: 'slide', ms: 2200 },
+  { phase: 'shake', ms: 2600 },
+  { phase: 'pour', ms: 1900 },
+  { phase: 'slide', ms: 1800 },
+  { phase: 'flair', ms: 1900 },
+  { phase: 'shake', ms: 2000 },
+  { phase: 'wipe', ms: 2200 },
+] as const;
+/** Spots along the counter he works from. */
+const BAR_STOPS = [0, 72, 148, 214, 280];
+
+/**
+ * The bartender: works the counter rather than just pacing it. He slides to a spot, stops to shake a
+ * drink, pours it into the glasses, tosses the shaker for a bit of flair, and wipes down — then moves
+ * on. The phase drives which animation the arms/shaker/glasses run (see the `.phase-*` rules).
+ */
 function Bartender() {
+  const reduced = useReducedMotion();
+  const [step, setStep] = useState(0);
+  const [x, setX] = useState(BAR_STOPS[0]);
+  const [flip, setFlip] = useState(false);
+
+  useEffect(() => {
+    if (reduced) return;
+    const { phase, ms } = BAR_ROUTINE[step % BAR_ROUTINE.length];
+    if (phase === 'slide') {
+      // Pick a new spot on the counter and face the way he's heading.
+      const to = BAR_STOPS[Math.floor(Math.random() * BAR_STOPS.length)];
+      setFlip(to < x);
+      setX(to);
+    }
+    const t = window.setTimeout(() => setStep((n) => n + 1), ms);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, reduced]);
+
+  const phase = reduced ? 'shake' : BAR_ROUTINE[step % BAR_ROUTINE.length].phase;
   const ink = 'var(--ink)';
   return (
-    <div className="bartender" aria-hidden="true">
-      <div className="bartender-body">
-        <span className="roamer-tag">BAR</span>
-        <svg viewBox="0 0 20 28" width="20" height="28" shapeRendering="crispEdges">
-          {/* head + bow tie + torso */}
+    <div
+      className={`bartender phase-${phase}`}
+      aria-hidden="true"
+      style={{ transform: `translateX(${x}px)`, transition: reduced ? 'none' : 'transform 1.8s ease-in-out' }}
+    >
+      <div className="bartender-body" style={{ transform: flip ? 'scaleX(-1)' : 'none' }}>
+        <span className="roamer-tag" style={{ transform: `translateX(-50%) ${flip ? 'scaleX(-1)' : ''}` }}>
+          BAR
+        </span>
+        <svg viewBox="0 0 30 28" width="30" height="28" shapeRendering="crispEdges">
+          {/* head, bow tie, torso */}
           <rect x="7" y="1" width="6" height="6" fill={ink} />
           <rect x="8" y="8" width="4" height="2" fill={ink} />
           <rect x="5" y="10" width="10" height="8" fill={ink} />
           <rect x="9" y="11" width="2" height="5" fill="var(--paper)" />
-          <rect x="2" y="11" width="3" height="6" fill={ink} />
-          {/* shaking arm + shaker */}
+          {/* left arm — wipes the counter */}
+          <g className="wipeArm">
+            <rect x="2" y="11" width="3" height="6" fill={ink} />
+          </g>
+          {/* right arm + shaker — shakes, pours, and gets tossed */}
           <g className="shakeArm">
             <rect x="15" y="11" width="3" height="6" fill={ink} />
-            <rect x="15" y="7" width="4" height="5" fill={ink} />
-            <rect x="16" y="8" width="2" height="3" fill="var(--paper)" />
+            <g className="shaker">
+              <rect x="15" y="6" width="4" height="6" fill={ink} />
+              <rect x="16" y="7" width="2" height="3" fill="var(--paper)" />
+            </g>
           </g>
           <rect x="6" y="18" width="8" height="7" fill={ink} />
+          {/* the two glasses on the counter, filled during the pour */}
+          <g className="glasses">
+            <rect x="21" y="14" width="3" height="5" fill={ink} />
+            <rect x="26" y="14" width="3" height="5" fill={ink} />
+            <g className="pourStream">
+              <rect x="22" y="10" width="1" height="4" fill={ink} />
+              <rect x="27" y="10" width="1" height="4" fill={ink} />
+            </g>
+          </g>
         </svg>
       </div>
     </div>
   );
 }
+
 
 /** The bar: back-shelf bottles, the counter, a working bartender, the TV, and the lit dance floor. */
 function BarScene({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
