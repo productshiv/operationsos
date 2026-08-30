@@ -563,6 +563,13 @@ code {
   color: var(--good);
   white-space: nowrap;
 }
+.conn-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
 .setup-foot {
   display: flex;
   gap: 9px;

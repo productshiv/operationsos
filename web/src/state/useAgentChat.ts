@@ -57,6 +57,8 @@ interface StreamEvent {
     function?: { name?: string; arguments?: string };
   }>;
   toolCallId?: string;
+  /** On `turn.done`: the final state. `status: 'error'` carries a human-readable `message`. */
+  state?: { status?: string; message?: string };
 }
 
 /**
@@ -199,6 +201,11 @@ export function useAgentChat(spec: Record<string, unknown>) {
       }
       case 'turn.done':
         setBusy(false);
+        // A turn can fail after streaming nothing (e.g. a model 402 / provider error). Surface the
+        // reason instead of leaving the response blank.
+        if (ev.state?.status === 'error') {
+          note(`⚠ ${ev.state.message ?? 'The turn failed.'}`);
+        }
         break;
     }
     rebuild();

@@ -196,7 +196,7 @@ function ProviderForm({
 
 function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useConnectors> }) {
   const [custom, setCustom] = useState(false);
-  const { connectors: list, connectState, connect, catalog, catalogState, addFromCatalog } = connectors;
+  const { connectors: list, connectState, connect, disconnect, catalog, catalogState, addFromCatalog } = connectors;
   const authed = list.filter((c) => c.status !== 'auth_required').length;
   const configured = new Set(list.map((c) => c.name));
   const available = catalog.filter((c) => !configured.has(c.name));
@@ -228,6 +228,7 @@ function ConnectorsSection({ connectors }: { connectors: ReturnType<typeof useCo
                   connector={c}
                   state={connectState[c.name] ?? 'idle'}
                   onConnect={(win) => void connect(c.name, win)}
+                  onDisconnect={() => void disconnect(c.name)}
                 />
               ))}
             </div>
@@ -348,14 +349,17 @@ function ConnectorRow({
   connector,
   state,
   onConnect,
+  onDisconnect,
 }: {
   connector: Connector;
   state: ConnectState;
   onConnect: (popup: Window | null) => void;
+  onDisconnect: () => void;
 }) {
   // Open the OAuth tab synchronously inside the click so popup blockers don't kill it; the hook
   // navigates it once the authorization URL arrives.
   const handleConnect = () => onConnect(window.open('', '_blank'));
+  const busy = state === 'authorizing' || state === 'disconnecting';
 
   return (
     <div className="conn">
@@ -363,13 +367,20 @@ function ConnectorRow({
         <div className="conn-name">{connector.name}</div>
         <div className="conn-url dim">{connector.url}</div>
         {state === 'error' && (
-          <div className="conn-err">Couldn’t authorise — allow pop-ups, then retry.</div>
+          <div className="conn-err">Something went wrong — retry.</div>
         )}
       </div>
-      {connector.status === 'authenticated' && <span className="conn-ok">✓ connected</span>}
       {connector.status === 'not_required' && <span className="conn-ok">✓ ready</span>}
+      {connector.status === 'authenticated' && (
+        <div className="conn-actions">
+          <span className="conn-ok">✓ connected</span>
+          <button className="link-btn" onClick={onDisconnect} disabled={busy}>
+            {state === 'disconnecting' ? '…' : 'Disconnect'}
+          </button>
+        </div>
+      )}
       {connector.status === 'auth_required' && (
-        <button className="btn" onClick={handleConnect} disabled={state === 'authorizing'}>
+        <button className="btn" onClick={handleConnect} disabled={busy}>
           {state === 'authorizing' ? 'Authorising…' : state === 'error' ? 'Retry' : 'Connect'}
         </button>
       )}
