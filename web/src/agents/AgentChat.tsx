@@ -2,7 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
+import { addCatalogConnector, authorizeConnector, listCatalog } from '../lib/connectors';
 import type { AgentConfig } from '../lib/agents';
+
+/** Strip minimax's internal reasoning tags (`<mm:think>…</mm:think>`) — including an unclosed one
+ *  mid-stream — so they never leak into the visible reply. */
+function stripThink(text: string): string {
+  return text
+    .replace(/<mm:think>[\s\S]*?<\/mm:think>/g, '')
+    .replace(/<mm:think>[\s\S]*$/g, '')
+    .replace(/<\/mm:think>/g, '')
+    .trimStart();
+}
 
 /** Assistant replies are markdown; render them (links open safely in a new tab). */
 function Markdown({ text }: { text: string }) {
@@ -12,7 +23,7 @@ function Markdown({ text }: { text: string }) {
         remarkPlugins={[remarkGfm]}
         components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
       >
-        {text}
+        {stripThink(text)}
       </ReactMarkdown>
     </div>
   );
@@ -50,20 +61,51 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * touch the database until you authorise.
  */
 export function AgentChat({ agent }: { agent: AgentConfig }) {
-  const { items, busy, pending, send, decide } = useAgentChat(agent.spec);
+  const { items, busy, pending, needsConnector, send, decide, retry, clearNeedsConnector } =
+    useAgentChat(agent.spec);
   const [draft, setDraft] = useState('');
+  const [fixing, setFixing] = useState(false);
+  const [fixErr, setFixErr] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const l = logRef.current;
     if (l) l.scrollTop = l.scrollHeight;
-  }, [items, pending, busy]);
+  }, [items, pending, busy, needsConnector]);
 
   const submit = (text: string) => {
     const t = text.trim();
     if (!t || busy || pending) return;
     setDraft('');
     void send(t);
+  };
+
+  // Add the connector the agent needs (from the catalog), then re-run the message so it continues.
+  const addAndContinue = async () => {
+    if (!needsConnector) return;
+    setFixing(true);
+    setFixErr(null);
+    try {
+      const entry = (await listCatalog()).find((c) => c.name === needsConnector);
+      if (!entry) {
+        setFixErr(`“${needsConnector}” isn’t in the catalog — add it in Integrations, then send again.`);
+        return;
+      }
+      await addCatalogConnector(entry);
+      if (entry.authType !== 'none') {
+        // OAuth / key needed — kick off auth in a tab; the CEO finishes it, then sends again.
+        const { authorizationUrl } = await authorizeConnector(entry.name);
+        if (authorizationUrl) window.open(authorizationUrl, '_blank');
+        clearNeedsConnector();
+        setFixErr(`Connect “${needsConnector}” in the new tab, then send your message again.`);
+        return;
+      }
+      await retry();
+    } catch {
+      setFixErr('Couldn’t add it — try again, or add it in Integrations.');
+    } finally {
+      setFixing(false);
+    }
   };
 
   return (
@@ -104,6 +146,21 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
         ) : null}
 
         {busy && !pending && <div className="typing muted">…thinking</div>}
+
+        {needsConnector && !busy && (
+          <div className="fixcard">
+            <p>
+              <b>{agent.name}</b> needs the <code>{needsConnector}</code> tool, which isn’t connected yet.
+            </p>
+            <div className="fixrow">
+              <button className="btn go" onClick={() => void addAndContinue()} disabled={fixing}>
+                {fixing ? 'Adding…' : `＋ Add ${needsConnector} & continue`}
+              </button>
+              <button className="btn" onClick={clearNeedsConnector} disabled={fixing}>Dismiss</button>
+            </div>
+            {fixErr && <div className="apwarn">{fixErr}</div>}
+          </div>
+        )}
 
         {pending && (
           <div className="approval">

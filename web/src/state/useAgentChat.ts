@@ -102,10 +102,23 @@ function policyWarning(t: ToolActivity): string | undefined {
   return undefined;
 }
 
+/**
+ * When a turn fails because the agent's spec names an MCP server the harness doesn't have, pull out
+ * that connector name so the UI can offer to add it and continue — instead of a dead error.
+ */
+function detectMissingConnector(message: string): string | null {
+  // The name arrives quoted (often escaped, e.g. \"exa\"), so skip any non-alphanumerics after
+  // "server" before capturing it.
+  const m = message.match(/unknown mcp server[^a-z0-9]*([a-z0-9_-]+)/i);
+  return m ? m[1] : null;
+}
+
 export function useAgentChat(spec: Record<string, unknown>) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  // Set when a turn failed because a connector the agent needs isn't configured on the harness.
+  const [needsConnector, setNeedsConnector] = useState<string | null>(null);
 
   const sessionRef = useRef<string | null>(null);
   const basesRef = useRef<Map<string, MessageBase>>(new Map());
@@ -113,6 +126,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const userTextRef = useRef<Map<string, string>>(new Map());
   const toolResultRef = useRef<Map<string, string>>(new Map());
   const counterRef = useRef(0);
+  const lastUserRef = useRef<string>('');
 
   const rebuild = useCallback(() => {
     const out: ChatItem[] = [];
@@ -201,10 +215,13 @@ export function useAgentChat(spec: Record<string, unknown>) {
       }
       case 'turn.done':
         setBusy(false);
-        // A turn can fail after streaming nothing (e.g. a model 402 / provider error). Surface the
-        // reason instead of leaving the response blank.
+        // A turn can fail after streaming nothing (e.g. a model 402, or a connector that isn't
+        // configured). Turn a missing-connector failure into a fix-it CTA; surface anything else.
         if (ev.state?.status === 'error') {
-          note(`⚠ ${ev.state.message ?? 'The turn failed.'}`);
+          const msg = ev.state.message ?? 'The turn failed.';
+          const missing = detectMissingConnector(msg);
+          if (missing) setNeedsConnector(missing);
+          else note(`⚠ ${msg}`);
         }
         break;
     }
@@ -215,15 +232,12 @@ export function useAgentChat(spec: Record<string, unknown>) {
     for await (const { data } of stream.withMetadata()) handle(data as StreamEvent);
   }
 
-  const send = useCallback(
-    async (text: string) => {
-      const t = text.trim();
-      if (busy || pending || !t) return; // don't start a turn while a checkpoint is open
-      const key = `user:${counterRef.current++}`;
-      userTextRef.current.set(key, t);
-      orderRef.current.push(key);
-      rebuild();
+  // Run one turn for `text` — used by both a fresh send and a retry after a fix. Doesn't add a user
+  // bubble (the caller decides), so a retry re-runs the same message without duplicating it.
+  const runTurn = useCallback(
+    async (t: string) => {
       setBusy(true);
+      setNeedsConnector(null);
       try {
         if (!sessionRef.current) {
           const created = await trueforge.sessions.create({ agent: { spec } } as never);
@@ -234,13 +248,38 @@ export function useAgentChat(spec: Record<string, unknown>) {
         });
         await consume(stream as never);
       } catch (e) {
-        note(`⚠ ${(e as Error).message}`);
+        const msg = (e as Error).message ?? String(e);
+        const missing = detectMissingConnector(msg);
+        if (missing) setNeedsConnector(missing);
+        else note(`⚠ ${msg}`);
       } finally {
         setBusy(false);
       }
     },
-    [busy, pending, spec, rebuild],
+    [spec],
   );
+
+  const send = useCallback(
+    async (text: string) => {
+      const t = text.trim();
+      if (busy || pending || !t) return; // don't start a turn while a checkpoint is open
+      const key = `user:${counterRef.current++}`;
+      userTextRef.current.set(key, t);
+      orderRef.current.push(key);
+      lastUserRef.current = t;
+      rebuild();
+      await runTurn(t);
+    },
+    [busy, pending, runTurn, rebuild],
+  );
+
+  /** Re-run the last message — e.g. after adding the connector it needed. */
+  const retry = useCallback(async () => {
+    if (busy || pending || !lastUserRef.current) return;
+    await runTurn(lastUserRef.current);
+  }, [busy, pending, runTurn]);
+
+  const clearNeedsConnector = useCallback(() => setNeedsConnector(null), []);
 
   const decide = useCallback(
     async (status: 'allow' | 'deny') => {
@@ -269,5 +308,5 @@ export function useAgentChat(spec: Record<string, unknown>) {
     [pending, busy, rebuild],
   );
 
-  return { items, busy, pending, send, decide };
+  return { items, busy, pending, needsConnector, send, decide, retry, clearNeedsConnector };
 }
