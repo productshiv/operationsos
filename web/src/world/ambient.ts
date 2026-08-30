@@ -37,4 +37,4 @@ export const WAYPOINTS: Array<{ x: number; y: number }> = [
 ];
 
 /** How many workers wander the floor. Kept low so it stays calm, not busy. */
-export const ROAMER_COUNT = 3;
+export const ROAMER_COUNT = 2;

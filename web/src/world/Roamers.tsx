@@ -73,10 +73,10 @@ function Worker({ startIdx }: { startIdx: number }) {
       arrive = window.setTimeout(() => {
         if (!alive) return;
         setWalking(false);
-        const pause = 1800 + Math.random() * 3600; // idle a moment at the destination
+        const pause = 8000 + Math.random() * 10000; // linger a good while — an occasional stroll, not a shuffle
         t = window.setTimeout(loop, pause);
       }, travel);
-    }, 600 + Math.random() * 2400);
+    }, 1500 + Math.random() * 4000);
 
     return () => {
       alive = false;
