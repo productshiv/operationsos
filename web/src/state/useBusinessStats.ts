@@ -34,7 +34,14 @@ async function refresh() {
       openComplaints: Number(s.openComplaints ?? 0),
       highSeverityComplaints: Number(s.highSeverityComplaints ?? 0),
       errorsLast24h: Number(s.errorsLast24h ?? 0),
-      bursts: Array.isArray(s.bursts) ? s.bursts : [],
+      // Validate each entry: `inboundFor` reads bursts[0].what, so an array of nulls would throw
+      // and take the whole floor down over a malformed (but successful) response.
+      bursts: Array.isArray(s.bursts)
+        ? s.bursts.filter(
+            (b): b is { what: string; count: number } =>
+              !!b && typeof b === 'object' && typeof (b as { what?: unknown }).what === 'string',
+          )
+        : [],
     };
   } catch {
     stats = null; // feed unreachable — show nothing rather than a stale or wrong number

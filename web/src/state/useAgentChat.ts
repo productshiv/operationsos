@@ -171,6 +171,9 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
 
 
   const sessionRef = useRef<string | null>(null);
+  // Mirrors `busy` for the callbacks that must not act mid-turn (see openSession).
+  const busyRef = useRef(false);
+  busyRef.current = busy;
   // The MCP server names the live session was actually created with — frozen at creation, since the
   // server-side session can't be re-specced afterwards. Lets the UI gate Jira-dependent actions on
   // what THIS session can invoke, not on a connector that resolved after the session already existed.
@@ -468,6 +471,9 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
    */
   const openSession = useCallback(
     (id: string) => {
+      // Never switch while a turn is streaming: the old stream would keep writing into the new
+      // conversation's transcript and session.
+      if (busyRef.current) return;
       unabandonSession(id);
       // Persisted, so reopening the desk returns to the chat the CEO chose rather than the newest one.
       pinSession(agentId, id, specFingerprint(instructions, modelName, serverKey ? serverKey.split(',') : []));
