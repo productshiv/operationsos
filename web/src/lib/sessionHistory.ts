@@ -44,7 +44,10 @@ export interface FoundSession {
 /** Loose views of the SDK types — we read only the fields we need. */
 interface ListedSession {
   id: string;
-  agent?: { type?: string; spec?: { instructions?: string; mcpServers?: Array<{ name?: string }> } };
+  agent?: {
+    type?: string;
+    spec?: { instructions?: string; model?: { name?: string }; mcpServers?: Array<{ name?: string }> };
+  };
 }
 interface HistEvent {
   type: string;
@@ -61,7 +64,7 @@ interface HistEvent {
  * bounded number of recent sessions. Returns its id and the servers it was created with, or null if
  * the agent has no prior session (or the harness can't be reached).
  */
-export async function findAgentSession(instructions: string): Promise<FoundSession | null> {
+export async function findAgentSession(instructions: string, model: string): Promise<FoundSession | null> {
   try {
     // Only the first page (25 most recent). We reuse+bump a session on every turn, so the active one
     // stays on top; and we deliberately don't auto-paginate — the SDK's session pager re-fetches the
@@ -69,7 +72,9 @@ export async function findAgentSession(instructions: string): Promise<FoundSessi
     const page = await trueforgeControl.sessions.list({ limit: 25, order: 'desc' });
     for (const raw of (page.data ?? []) as ListedSession[]) {
       const spec = raw.agent?.spec;
-      if (spec?.instructions === instructions) {
+      // Match on instructions AND model, so switching the default model starts a fresh conversation
+      // on the new model rather than resuming one pinned to the old (e.g. credit-exhausted) provider.
+      if (spec?.instructions === instructions && spec?.model?.name === model) {
         const mcpServers = Array.isArray(spec.mcpServers)
           ? spec.mcpServers.map((m) => m?.name ?? '').filter(Boolean)
           : [];

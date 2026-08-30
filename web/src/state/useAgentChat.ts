@@ -300,10 +300,21 @@ export function useAgentChat(spec: Record<string, unknown>) {
   // injection doesn't change it) so it doesn't re-run and duplicate when the resolved spec updates;
   // a fresh run each StrictMode/remount cancels the previous one before it mutates anything.
   const instructions = typeof spec.instructions === 'string' ? spec.instructions : '';
+  const modelName = (spec.model as { name?: string } | undefined)?.name ?? '';
   useEffect(() => {
     let cancelled = false;
+    // instructions+model identify a conversation; if either changes, this is a different conversation
+    // (e.g. the CEO switched the default model), so clear the current transcript before restoring.
+    orderRef.current = [];
+    basesRef.current.clear();
+    userTextRef.current.clear();
+    toolResultRef.current.clear();
+    sessionRef.current = null;
+    setItems([]);
+    setSessionServers(null);
+    setHydrating(true);
     void (async () => {
-      const found = instructions ? await findAgentSession(instructions) : null;
+      const found = instructions && modelName ? await findAgentSession(instructions, modelName) : null;
       if (cancelled) return;
       if (!found) {
         setHydrating(false);
@@ -331,7 +342,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
     return () => {
       cancelled = true;
     };
-  }, [instructions, rebuild]);
+  }, [instructions, modelName, rebuild]);
 
   const send = useCallback(
     async (text: string) => {

@@ -60,11 +60,19 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * and — when a tool needs sign-off — a gold approval gate right in the thread. The agent doesn't
  * touch the database until you authorise.
  */
-export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | null | undefined }) {
-  // Jira (the live connector name, or null) is resolved by the app from shared connector state and
-  // injected into the spec at runtime — so a missing or renamed Jira never breaks this agent's normal
-  // answers, and the atlassian/jira naming difference is handled for us.
-  const spec = useMemo(() => buildAgentSpec(agent, jira ?? null), [agent, jira]);
+export function AgentChat({
+  agent,
+  jira,
+  agentModel,
+}: {
+  agent: AgentConfig;
+  jira: string | null | undefined;
+  agentModel: string;
+}) {
+  // Jira (the live connector name, or null) and the chosen default model are resolved by the app and
+  // injected into the spec at runtime — so a missing/renamed Jira never breaks normal answers, the
+  // atlassian/jira naming difference is handled, and agents run on whichever model the CEO picked.
+  const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
   const { items, busy, pending, needsConnector, turnError, hydrating, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
     useAgentChat(spec);
   // Offer the ticket action only when the connector THIS session was created with includes Jira — so

@@ -132,8 +132,15 @@ Every substantive change ships through a GitHub pull request reviewed by
   the tools; re-review **0 findings**.
 - **[#20 — Real job-title names across the floor](https://github.com/productshiv/operationsos/pull/20)** —
   naming only; review returned **0 findings**.
+- **[#21 — Open-a-ticket on every agent + fix lingering approval card](https://github.com/productshiv/operationsos/pull/21)** —
+  **3 findings** (2 High / 1 Medium, Correctness/Reliability): after an approval was accepted, a dropped
+  response stream exposed the generic retry — which replays the message and could file a **duplicate**
+  ticket; the ticket action could target a session created before Jira resolved (so it couldn't invoke
+  it); and Jira availability was a one-time snapshot that never refreshed. Fixed by making a post-accept
+  failure a passive note (no write-duplicating retry), binding the action to the session's own frozen
+  spec, and moving Jira resolution onto the app's shared, refreshable connector state; re-review **0 findings**.
 
-Across all 20 PRs Qodo surfaced **43 findings** (including **2 security** issues); every one was
+Across all 21 PRs Qodo surfaced **46 findings** (including **2 security** issues); every one was
 fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
 actionable findings passed a **follow-up review with 0 findings** before merge.
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useConnectors, type ConnectState } from '../state/useConnectors';
 import { useModels } from '../state/useModels';
-import { AGENT_MODEL } from '../lib/agents';
+import { useAgentModel } from '../state/useAgentModel';
 import type { CatalogConnector, Connector, ConnectorAuthKind } from '../lib/connectors';
 import type { ModelRef } from '../lib/models';
 
@@ -13,10 +13,12 @@ import type { ModelRef } from '../lib/models';
 export function Setup({
   connectors,
   models,
+  agentModel,
   onClose,
 }: {
   connectors: ReturnType<typeof useConnectors>;
   models: ReturnType<typeof useModels>;
+  agentModel: ReturnType<typeof useAgentModel>;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -54,7 +56,7 @@ export function Setup({
             </div>
           ) : (
             <>
-              <ModelsSection models={models} />
+              <ModelsSection models={models} agentModel={agentModel} />
               <ConnectorsSection connectors={connectors} />
             </>
           )}
@@ -71,11 +73,17 @@ export function Setup({
 
 /* ------------------------------- MODELS ------------------------------- */
 
-function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
+function ModelsSection({
+  models,
+  agentModel,
+}: {
+  models: ReturnType<typeof useModels>;
+  agentModel: ReturnType<typeof useAgentModel>;
+}) {
   const [adding, setAdding] = useState(false);
 
-  // Agents run on one specific model — a differently named provider doesn't make them runnable.
-  const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === AGENT_MODEL);
+  // Agents run on the chosen default model — a differently named provider doesn't make them runnable.
+  const hasAgentModel = models.models.some((m) => `${m.provider}/${m.model}` === agentModel.model);
 
   return (
     <section className="intg-sec">
@@ -101,14 +109,22 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
           {models.models.length > 0 && (
             <div className="intg-list">
               {models.models.map((m) => (
-                <ModelRow key={`${m.provider}/${m.model}`} model={m} />
+                <ModelRow
+                  key={`${m.provider}/${m.model}`}
+                  model={m}
+                  isDefault={`${m.provider}/${m.model}` === agentModel.model}
+                  onUse={() => agentModel.setModel(`${m.provider}/${m.model}`)}
+                />
               ))}
             </div>
           )}
 
-          {/* Some model exists, but not the one the agents call — say so plainly. */}
+          {/* The chosen default model isn't configured on the harness — agents can't run on it. */}
           {models.models.length > 0 && !hasAgentModel && !adding && (
-            <p className="dim intg-form-note">Agents need <code>{AGENT_MODEL}</code>.</p>
+            <p className="dim intg-form-note">
+              Agents are set to <code>{agentModel.model}</code>, which isn’t configured — add it, or pick
+              a listed model as the default.
+            </p>
           )}
         </>
       )}
@@ -118,15 +134,26 @@ function ModelsSection({ models }: { models: ReturnType<typeof useModels> }) {
   );
 }
 
-function ModelRow({ model }: { model: ModelRef }) {
-  const isAgentModel = `${model.provider}/${model.model}` === AGENT_MODEL;
+function ModelRow({
+  model,
+  isDefault,
+  onUse,
+}: {
+  model: ModelRef;
+  isDefault: boolean;
+  onUse: () => void;
+}) {
   return (
     <div className="conn">
       <div className="conn-id">
         <div className="conn-name">{model.provider}/{model.model}</div>
         <div className="conn-url dim">{model.modelId}</div>
       </div>
-      <span className="conn-ok">{isAgentModel ? '✓ agents’ model' : '✓ ready'}</span>
+      {isDefault ? (
+        <span className="conn-ok">✓ agents’ model</span>
+      ) : (
+        <button className="link-btn" onClick={onUse}>Use for agents</button>
+      )}
     </div>
   );
 }
