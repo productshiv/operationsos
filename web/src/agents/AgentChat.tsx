@@ -74,7 +74,7 @@ export function AgentChat({
   // atlassian/jira naming difference is handled, and agents run on whichever model the CEO picked.
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null, agentModel), [agent, jira, agentModel]);
   const {
-    items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration,
+    items, busy, pending, needsConnector, turnError, hydrating, hydrationError, retryHydration, newChat,
     sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError,
   } = useAgentChat(spec);
   const locked = hydrating || hydrationError; // composer disabled while restoring or after a restore error
@@ -137,7 +137,14 @@ export function AgentChat({
         <div>
           <span className="agname chi">{agent.name}</span> <span className="muted">{agent.role}</span>
         </div>
-        <span className="tag8">ONLINE</span>
+        <div className="aghead-right">
+          {/* Start over — clears the transcript and starts a fresh session (drops a piled-up or
+              error-filled conversation). Only offered once there's something to clear. */}
+          {(items.length > 0 || turnError || hydrationError) && !busy && (
+            <button className="link-btn" onClick={newChat} disabled={hydrating}>New chat</button>
+          )}
+          <span className="tag8">ONLINE</span>
+        </div>
       </div>
 
       <div className="chatlog" ref={logRef}>

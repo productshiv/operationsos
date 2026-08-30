@@ -38,12 +38,14 @@ export interface CustomProviderInput {
 }
 
 /**
- * Add a Custom (OpenAI-compatible) model provider to the harness — the shape OpenRouter and most
- * hosted gateways use. Once created, agents can reference `<name>/<modelName>`. The API key is
- * stored server-side on the harness (redacted in every read-back).
+ * Add or update a Custom (OpenAI-compatible) model provider on the harness — the shape OpenRouter and
+ * most hosted gateways use. Once saved, agents can reference `<name>/<modelName>`. Uses upsert
+ * (createOrUpdate), so re-saving with the same provider name **corrects** an existing one — e.g. to
+ * fix a wrong base URL or model id that was returning 404s. The API key is stored server-side on the
+ * harness (redacted in every read-back).
  */
 export async function createCustomProvider(input: CustomProviderInput): Promise<void> {
-  await trueforgeControl.settings.modelProviders.create({
+  await trueforgeControl.settings.modelProviders.createOrUpdate({
     manifest: {
       type: 'custom',
       name: input.name,

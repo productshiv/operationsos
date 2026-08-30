@@ -205,6 +205,11 @@ function ProviderForm({
         </Field>
       </div>
 
+      <p className="dim intg-form-note">
+        Re-saving with an existing provider name updates it — use this to fix a wrong base URL or model
+        ID (e.g. a provider returning 404).
+      </p>
+
       {models.saveState === 'error' && (
         <div className="conn-err">Couldn’t add — check the key and URL.</div>
       )}
