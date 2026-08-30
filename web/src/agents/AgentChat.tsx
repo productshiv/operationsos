@@ -61,7 +61,7 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * touch the database until you authorise.
  */
 export function AgentChat({ agent }: { agent: AgentConfig }) {
-  const { items, busy, pending, needsConnector, send, decide, retry, clearNeedsConnector } =
+  const { items, busy, pending, needsConnector, turnError, send, decide, retry, clearNeedsConnector, clearTurnError } =
     useAgentChat(agent.spec);
   const [draft, setDraft] = useState('');
   const [fixing, setFixing] = useState(false);
@@ -146,6 +146,16 @@ export function AgentChat({ agent }: { agent: AgentConfig }) {
         ) : null}
 
         {busy && !pending && <div className="typing muted">…thinking</div>}
+
+        {turnError && !busy && !needsConnector && (
+          <div className="fixcard">
+            <p>{turnError}</p>
+            <div className="fixrow">
+              <button className="btn go" onClick={() => void retry()}>Try again</button>
+              <button className="btn" onClick={clearTurnError}>Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {needsConnector && !busy && (
           <div className="fixcard">

@@ -113,12 +113,22 @@ function detectMissingConnector(message: string): string | null {
   return m ? m[1] : null;
 }
 
+/** Turn a raw error into something readable — a bare "Failed to fetch" isn't helpful. */
+function friendlyError(message: string): string {
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
+    return 'Couldn’t reach the harness — it may be offline or restarting. Try again in a moment.';
+  }
+  return message;
+}
+
 export function useAgentChat(spec: Record<string, unknown>) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   // Set when a turn failed because a connector the agent needs isn't configured on the harness.
   const [needsConnector, setNeedsConnector] = useState<string | null>(null);
+  // Set when a turn failed for another reason (e.g. a network error) — shown with a Try-again.
+  const [turnError, setTurnError] = useState<string | null>(null);
 
   const sessionRef = useRef<string | null>(null);
   const basesRef = useRef<Map<string, MessageBase>>(new Map());
@@ -221,7 +231,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
           const msg = ev.state.message ?? 'The turn failed.';
           const missing = detectMissingConnector(msg);
           if (missing) setNeedsConnector(missing);
-          else note(`⚠ ${msg}`);
+          else setTurnError(friendlyError(msg));
         }
         break;
     }
@@ -238,6 +248,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
     async (t: string) => {
       setBusy(true);
       setNeedsConnector(null);
+      setTurnError(null);
       try {
         if (!sessionRef.current) {
           const created = await trueforge.sessions.create({ agent: { spec } } as never);
@@ -251,7 +262,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
         const msg = (e as Error).message ?? String(e);
         const missing = detectMissingConnector(msg);
         if (missing) setNeedsConnector(missing);
-        else note(`⚠ ${msg}`);
+        else setTurnError(friendlyError(msg));
       } finally {
         setBusy(false);
       }
@@ -280,6 +291,7 @@ export function useAgentChat(spec: Record<string, unknown>) {
   }, [busy, pending, runTurn]);
 
   const clearNeedsConnector = useCallback(() => setNeedsConnector(null), []);
+  const clearTurnError = useCallback(() => setTurnError(null), []);
 
   const decide = useCallback(
     async (status: 'allow' | 'deny') => {
@@ -308,5 +320,16 @@ export function useAgentChat(spec: Record<string, unknown>) {
     [pending, busy, rebuild],
   );
 
-  return { items, busy, pending, needsConnector, send, decide, retry, clearNeedsConnector };
+  return {
+    items,
+    busy,
+    pending,
+    needsConnector,
+    turnError,
+    send,
+    decide,
+    retry,
+    clearNeedsConnector,
+    clearTurnError,
+  };
 }
