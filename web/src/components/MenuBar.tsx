@@ -51,10 +51,12 @@ export function MenuBar({
       <div className="spread">
         {/* How the system fits together, and where it's going — reference, always one click away. */}
         <button className="m m-btn m-ref" onClick={() => onInfo?.('architecture')} title="How OperationsOS works">
-          architecture
+          <span className="m-full">architecture</span>
+          <span className="m-short">arch</span>
         </button>
         <button className="m m-btn m-ref" onClick={() => onInfo?.('roadmap')} title="What's shipped and what's next">
-          roadmap
+          <span className="m-full">roadmap</span>
+          <span className="m-short">map</span>
         </button>
         <span className={`hstatus hstatus--${conn}`}>harness: {conn}</span>
         <span className="clock chi">{clock}</span>

@@ -329,7 +329,12 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
         // beforehand would, on a transient send failure, leave the server still waiting on the tool
         // response while the client had moved on — and the retry would go as a plain user message
         // (rejected with a 422), stranding the thread.
-        if (q) setQuestion(null);
+        if (q) {
+          setQuestion(null);
+          // The checkpoint is resolved, so this agent is no longer waiting on the CEO. Without this
+          // the board would keep claiming they need you after you'd already answered.
+          clearAttention(agentId);
+        }
         await consume(stream as never);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);

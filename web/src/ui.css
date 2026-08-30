@@ -2310,10 +2310,29 @@ code {
   margin-right: 2px;
 }
 
-/* The architecture/roadmap buttons are reference, not core controls — drop them before the header
-   runs out of room on narrow screens (it doesn't wrap or scroll). */
+/* The header neither wraps nor scrolls, so the architecture/roadmap buttons shorten on narrow
+   screens rather than disappearing — hiding them would make those windows unreachable entirely. */
+.menubar .m-ref .m-short {
+  display: none;
+}
 @media (max-width: 1180px) {
-  .menubar .m-btn.m-ref {
+  .menubar .m-ref .m-full {
     display: none;
+  }
+  .menubar .m-ref .m-short {
+    display: inline;
+  }
+  /* The header's contents already exceed a phone's width before these buttons (logo + Integrations
+     + jukebox + status), and the bar neither wraps nor scrolls — so anything past the edge is simply
+     clipped and unreachable. Let it scroll instead, and keep the controls from being squeezed. */
+  .menubar {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .menubar::-webkit-scrollbar {
+    display: none;
+  }
+  .menubar > * {
+    flex: 0 0 auto;
   }
 }
