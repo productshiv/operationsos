@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
-import { fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
+import { abandonSession, fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
 
 export interface ToolActivity {
   id: string;
@@ -394,6 +394,9 @@ export function useAgentChat(spec: Record<string, unknown>) {
    * the most-recently-updated one and is what future reopens restore.
    */
   const newChat = useCallback(() => {
+    // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
+    // before the replacement gets its first turn.
+    if (sessionRef.current) abandonSession(sessionRef.current);
     orderRef.current = [];
     basesRef.current.clear();
     userTextRef.current.clear();
