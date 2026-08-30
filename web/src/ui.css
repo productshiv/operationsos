@@ -422,6 +422,14 @@
   box-shadow: 7px 7px 0 var(--sh);
   display: flex;
   flex-direction: column;
+  /* Windows hold readable content — let people select & copy it even though the floor doesn't. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* The event ticker is also worth copying (ids, queries). */
+.ticker {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .win .wtb {
   display: flex;
