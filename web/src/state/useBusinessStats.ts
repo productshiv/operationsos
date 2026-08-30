@@ -36,11 +36,14 @@ async function refresh() {
       errorsLast24h: Number(s.errorsLast24h ?? 0),
       // Validate each entry: `inboundFor` reads bursts[0].what, so an array of nulls would throw
       // and take the whole floor down over a malformed (but successful) response.
+      // Validate BOTH fields: the label renders `what` and `count`, so a half-formed entry would
+      // otherwise put "undefined" on a desk badge tooltip.
       bursts: Array.isArray(s.bursts)
-        ? s.bursts.filter(
-            (b): b is { what: string; count: number } =>
-              !!b && typeof b === 'object' && typeof (b as { what?: unknown }).what === 'string',
-          )
+        ? s.bursts.filter((b): b is { what: string; count: number } => {
+            if (!b || typeof b !== 'object') return false;
+            const { what, count } = b as { what?: unknown; count?: unknown };
+            return typeof what === 'string' && typeof count === 'number' && Number.isFinite(count);
+          })
         : [],
     };
   } catch {
