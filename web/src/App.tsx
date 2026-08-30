@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MenuBar } from './components/MenuBar';
 import { Ticker } from './components/Ticker';
 import { Office } from './world/Office';
+import { MusicPlayer } from './music/MusicPlayer';
 import { Setup } from './setup/Setup';
 import { useHarnessStatus } from './lib/useHarnessStatus';
 import { useConnectors } from './state/useConnectors';
@@ -31,6 +32,7 @@ export default function App() {
     <div className="app">
       <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} />
       <Office />
+      <MusicPlayer />
       <Ticker />
       {setupOpen && (
         <Setup connectors={connectors} models={models} onClose={() => setSetupOpen(false)} />
