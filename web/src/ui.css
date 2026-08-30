@@ -7,6 +7,7 @@
 
 /* ---------------- MENU BAR ---------------- */
 .menubar {
+  position: relative; /* positioning context for the centred jukebox widget */
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1202,25 +1203,24 @@ code {
   border: 0;
 }
 .jukebox {
-  position: fixed;
+  position: absolute;
   left: 50%;
-  top: 46%;
+  top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 30;
   display: flex;
   align-items: stretch;
+  height: 24px;
   border: 2px solid var(--ink);
   background: var(--panel);
-  box-shadow: 4px 4px 0 var(--sh);
 }
 .jb-toggle {
   border: none;
   border-right: 2px solid var(--ink);
   background: var(--ink);
   color: var(--paper);
-  width: 30px;
+  width: 22px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 9px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -1235,17 +1235,17 @@ code {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 11px;
-  max-width: 190px;
+  gap: 7px;
+  padding: 0 9px;
+  max-width: 170px;
 }
 .jb-open:hover {
   background: var(--sink);
 }
 .jb-label {
   font-family: 'Silkscreen', monospace;
-  font-size: 9px;
-  letter-spacing: 0.04em;
+  font-size: 8px;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -1255,12 +1255,12 @@ code {
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  height: 13px;
+  height: 11px;
   flex: 0 0 auto;
 }
 .jb-eq i {
   width: 3px;
-  height: 4px;
+  height: 3px;
   background: var(--ink);
 }
 .jb-eq.on i {
@@ -1271,7 +1271,7 @@ code {
 .jb-eq.on i:nth-child(4) { animation-delay: 0.45s; }
 @keyframes eq {
   0%, 100% { height: 3px; }
-  50% { height: 13px; }
+  50% { height: 11px; }
 }
 .jukebox-win {
   width: min(420px, 92vw);

@@ -14,6 +14,24 @@ export interface Track {
   url: string;
   /** The YouTube video id used for playback + thumbnail. */
   videoId: string;
+  /** The real video title, fetched lazily via oEmbed. Falls back to the id until it arrives. */
+  title?: string;
+}
+
+/**
+ * Fetch a video's real title from YouTube's oEmbed endpoint (CORS-enabled — it reflects the request
+ * origin). Returns undefined on any failure so callers can fall back to the id.
+ */
+export async function fetchTitle(videoId: string): Promise<string | undefined> {
+  try {
+    const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://youtu.be/${videoId}`)}&format=json`;
+    const res = await fetch(url);
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { title?: unknown };
+    return typeof data.title === 'string' ? data.title : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A YouTube video id is exactly 11 URL-safe chars. One validator for every code path. */

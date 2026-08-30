@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { MenuBar } from './components/MenuBar';
 import { Ticker } from './components/Ticker';
 import { Office } from './world/Office';
-import { MusicPlayer } from './music/MusicPlayer';
+import { MusicEngine, JukeboxModal } from './music/MusicPlayer';
 import { Setup } from './setup/Setup';
 import { useHarnessStatus } from './lib/useHarnessStatus';
 import { useConnectors } from './state/useConnectors';
 import { useModels } from './state/useModels';
+import { useJukebox } from './state/useJukebox';
 import { AGENT_MODEL } from './lib/agents';
 import './ui.css';
 
@@ -14,6 +15,7 @@ export default function App() {
   const conn = useHarnessStatus();
   const connectors = useConnectors();
   const models = useModels();
+  const jukebox = useJukebox();
   const [setupOpen, setSetupOpen] = useState(false);
 
   // Nag when something actually needs doing. The model check is for the *exact* model every agent
@@ -30,10 +32,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} />
+      <MenuBar conn={conn} attention={needsAttention} onManage={() => setSetupOpen(true)} jukebox={jukebox} />
       <Office />
-      <MusicPlayer />
+      <MusicEngine jb={jukebox} />
       <Ticker />
+      {jukebox.open && <JukeboxModal jb={jukebox} onClose={() => jukebox.setOpen(false)} />}
       {setupOpen && (
         <Setup connectors={connectors} models={models} onClose={() => setSetupOpen(false)} />
       )}
