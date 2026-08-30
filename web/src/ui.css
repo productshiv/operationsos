@@ -1191,8 +1191,9 @@ code {
 }
 
 /* ---------------- JUKEBOX ---------------- */
-/* The audio engine: a real-size YouTube iframe parked off-screen so it keeps playing while hidden. */
-.jukebox-engine {
+/* The audio engine: the YouTube IFrame-API player, parked off-screen so it keeps playing hidden. */
+.jukebox-engine,
+.jukebox-engine iframe {
   position: fixed;
   left: -9999px;
   top: 0;

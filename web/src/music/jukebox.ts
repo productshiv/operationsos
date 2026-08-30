@@ -16,23 +16,35 @@ export interface Track {
   videoId: string;
 }
 
-/** Pull a YouTube video id from the common URL shapes (youtu.be, watch, embed, shorts, live). */
+/** A YouTube video id is exactly 11 URL-safe chars. One validator for every code path. */
+const VIDEO_ID = /^[\w-]{11}$/;
+
+/**
+ * Pull a YouTube video id from the common URL shapes (youtu.be, watch, embed, shorts, live), or a
+ * bare id. The extracted candidate is validated the same way as a bare id, so a malformed link like
+ * `youtu.be/not-an-id` is rejected rather than stored as an unplayable track.
+ */
 export function parseVideoId(input: string): string | null {
   const s = input.trim();
-  if (/^[\w-]{11}$/.test(s)) return s; // already a bare id
+  if (VIDEO_ID.test(s)) return s; // already a bare id
+  let candidate: string | null = null;
   try {
     const u = new URL(s);
     const host = u.hostname.replace(/^www\./, '');
-    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
-    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
-      if (u.pathname === '/watch') return u.searchParams.get('v');
-      const parts = u.pathname.split('/').filter(Boolean);
-      if (parts[0] === 'embed' || parts[0] === 'shorts' || parts[0] === 'live') return parts[1] ?? null;
+    if (host === 'youtu.be') {
+      candidate = u.pathname.slice(1).split('/')[0] || null;
+    } else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (u.pathname === '/watch') {
+        candidate = u.searchParams.get('v');
+      } else {
+        const parts = u.pathname.split('/').filter(Boolean);
+        if (parts[0] === 'embed' || parts[0] === 'shorts' || parts[0] === 'live') candidate = parts[1] ?? null;
+      }
     }
-    return null;
   } catch {
     return null;
   }
+  return candidate && VIDEO_ID.test(candidate) ? candidate : null;
 }
 
 function newId(seed: string): string {
@@ -59,15 +71,15 @@ export function defaultTracks(): Track[] {
 export function loadTracks(): Track[] {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultTracks();
+    if (raw === null) return defaultTracks(); // never saved → seed the default track
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return defaultTracks();
-    const clean = parsed.filter(
+    if (!Array.isArray(parsed)) return defaultTracks(); // malformed → seed the default track
+    // A valid array (including a deliberately emptied one) is the CEO's playlist — keep it as-is.
+    return parsed.filter(
       (t): t is Track =>
         !!t && typeof t === 'object' && typeof (t as Track).id === 'string' &&
         typeof (t as Track).url === 'string' && typeof (t as Track).videoId === 'string',
     );
-    return clean.length ? clean : defaultTracks();
   } catch {
     return defaultTracks();
   }

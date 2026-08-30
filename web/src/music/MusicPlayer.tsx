@@ -1,48 +1,114 @@
 import { useEffect, useRef, useState } from 'react';
 import { useJukebox } from '../state/useJukebox';
 
+/* ------- Minimal typings for the bits of the YouTube IFrame API we drive ------- */
+interface YTPlayer {
+  loadVideoById(id: string): void;
+  cueVideoById(id: string): void;
+  playVideo(): void;
+  pauseVideo(): void;
+  getVideoData?: () => { video_id?: string };
+  destroy(): void;
+}
+interface YTNamespace {
+  Player: new (el: Element, opts: unknown) => YTPlayer;
+  PlayerState: { ENDED: number };
+}
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+/** Load the IFrame API script once; resolve when `window.YT` is ready. */
+let apiPromise: Promise<void> | null = null;
+function loadYouTubeApi(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.YT?.Player) return Promise.resolve();
+  if (apiPromise) return apiPromise;
+  apiPromise = new Promise<void>((resolve) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(); };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return apiPromise;
+}
+
 /**
  * The floor jukebox: a small 1-bit player in the centre of the office, a modal to manage the
- * playlist (paste YouTube links, saved per device), and an offscreen YouTube iframe that is the
- * actual audio engine — kept mounted so playback survives closing the modal.
+ * playlist (paste YouTube links, saved per device), and an offscreen YouTube player that is the
+ * actual audio engine. It uses the official IFrame API so commands wait for real player readiness
+ * (no fixed-delay races), a paused load is cued rather than autoplayed, and a finished track
+ * advances the playlist.
  */
 export function MusicPlayer() {
   const jb = useJukebox();
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  // Only mount the audio engine once the CEO has pressed play — no YouTube load on a cold floor.
+  // Stable handle to the latest hook value for use inside the player's event callbacks.
+  const jbRef = useRef(jb);
+  jbRef.current = jb;
+
+  const hostRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
+  const [ready, setReady] = useState(false);
+
+  // Don't touch YouTube on a cold floor — build the engine the first time the CEO presses play.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (jb.playing) setArmed(true);
   }, [jb.playing]);
 
-  // Drive play/pause through the YouTube IFrame API over postMessage (no external script needed).
   useEffect(() => {
-    const win = iframeRef.current?.contentWindow;
-    if (!win || !jb.current) return;
-    const func = jb.playing ? 'playVideo' : 'pauseVideo';
-    // Give the player a beat to come up after a src (track) change before commanding it.
-    const t = setTimeout(() => {
-      win.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*');
-    }, 350);
-    return () => clearTimeout(t);
-  }, [jb.playing, jb.current]);
+    if (!armed) return;
+    let cancelled = false;
+    void loadYouTubeApi().then(() => {
+      if (cancelled || !hostRef.current || playerRef.current || !window.YT) return;
+      playerRef.current = new window.YT.Player(hostRef.current, {
+        width: '320',
+        height: '180',
+        videoId: jbRef.current.current?.videoId,
+        playerVars: { playsinline: 1, rel: 0, autoplay: 0 },
+        events: {
+          onReady: () => { if (!cancelled) setReady(true); },
+          onStateChange: (e: { data: number }) => {
+            if (e.data === window.YT?.PlayerState.ENDED) jbRef.current.next();
+          },
+        },
+      });
+    });
+    return () => {
+      cancelled = true;
+      try { playerRef.current?.destroy(); } catch { /* already gone */ }
+      playerRef.current = null;
+      setReady(false);
+    };
+  }, [armed]);
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const src = jb.current
-    ? `https://www.youtube.com/embed/${jb.current.videoId}?enablejsapi=1&autoplay=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`
-    : '';
+  const videoId = jb.current?.videoId;
+
+  // Load the current track once the player is ready. Cue (no autoplay) when paused, so switching
+  // tracks or resetting while paused never starts sound on its own.
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!ready || !p || !videoId) return;
+    if (p.getVideoData?.().video_id === videoId) return; // already the loaded track
+    if (jb.playing) p.loadVideoById(videoId);
+    else p.cueVideoById(videoId);
+  }, [ready, videoId, jb.playing]);
+
+  // Reflect play/pause on the ready player.
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!ready || !p || !videoId) return;
+    if (jb.playing) p.playVideo();
+    else p.pauseVideo();
+  }, [ready, jb.playing, videoId]);
 
   return (
     <>
-      {armed && jb.current && (
-        <iframe
-          ref={iframeRef}
-          className="jukebox-engine"
-          src={src}
-          title="Jukebox audio"
-          allow="autoplay; encrypted-media"
-        />
-      )}
+      {armed && <div ref={hostRef} className="jukebox-engine" />}
 
       <div className="jukebox">
         <button

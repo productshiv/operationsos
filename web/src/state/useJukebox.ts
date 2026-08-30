@@ -24,9 +24,15 @@ export function useJukebox() {
     saveTracks(tracks);
   }, [tracks]);
 
-  // Keep a valid current selection: fall back to the first track when there's none or it vanished.
+  // Keep transport state consistent with the playlist: an empty playlist has nothing to play, and
+  // otherwise the current selection falls back to the first track when it's unset or was removed.
   useEffect(() => {
-    setCurrentId((cur) => (cur && tracks.some((t) => t.id === cur) ? cur : tracks[0]?.id ?? null));
+    if (tracks.length === 0) {
+      setCurrentId(null);
+      setPlaying(false);
+      return;
+    }
+    setCurrentId((cur) => (cur && tracks.some((t) => t.id === cur) ? cur : tracks[0].id));
   }, [tracks]);
 
   const current = tracks.find((t) => t.id === currentId) ?? null;
