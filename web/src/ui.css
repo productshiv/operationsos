@@ -520,6 +520,143 @@
   box-shadow: none;
 }
 
+/* ---------------- HR ROOM + FLOOR PARTY ---------------- */
+.hrroom {
+  position: absolute;
+  border: 2px solid var(--ink);
+  background: var(--sink);
+  background-image: repeating-linear-gradient(90deg, var(--dot) 0 2px, transparent 2px 9px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--sh);
+}
+.hrroom-sign {
+  font-family: 'Silkscreen', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+.hrroom-note {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  text-transform: uppercase;
+}
+.hrcall {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The lit dance floor, over the rug. */
+.dancefloor {
+  position: absolute;
+  left: 300px;
+  top: 210px;
+  width: 380px;
+  height: 190px;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 38px),
+    repeating-linear-gradient(0deg, var(--ink) 0 2px, transparent 2px 38px);
+  opacity: 0.28;
+  animation: floorpulse 1.1s steps(2) infinite;
+}
+@keyframes floorpulse {
+  0%, 100% { opacity: 0.16; }
+  50% { opacity: 0.36; }
+}
+
+/* The bar TV — sits above the dance floor, showing the jukebox track. */
+.bartv {
+  position: absolute;
+  /* Mounted at the top of the dance floor (the rug) — the gap above it is only ~32px, so the TV sits
+     just inside the floor, above the dancers' spots (which start at y≈250). */
+  left: 620px;
+  top: 216px;
+  width: 150px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bartv-screen {
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 4px 4px 0 var(--sh);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bartv-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 26px;
+}
+.bartv-bars i {
+  flex: 1;
+  background: var(--ink);
+  height: 30%;
+  animation: eq 0.62s ease-in-out infinite alternate;
+}
+@keyframes eq {
+  from { height: 18%; }
+  to { height: 100%; }
+}
+.bartv-title {
+  font-family: 'Silkscreen', monospace;
+  font-size: 7px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bartv-stand {
+  width: 26px;
+  height: 8px;
+  border: 2px solid var(--ink);
+  border-top: none;
+  background: var(--panel);
+}
+
+/* Dancing: bob the body and throw the arms up. */
+.partygoer.dancing .roamer-body {
+  animation: dance 0.5s steps(2) infinite;
+}
+.partygoer.dancing .armL {
+  animation: armup 0.5s steps(2) infinite;
+  transform-origin: 4px 16px;
+}
+.partygoer.dancing .armR {
+  animation: armup 0.5s steps(2) infinite reverse;
+  transform-origin: 16px 16px;
+}
+@keyframes dance {
+  0% { transform: translateY(0) rotate(-4deg); }
+  100% { transform: translateY(-3px) rotate(4deg); }
+}
+@keyframes armup {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-52deg); }
+}
+/* Party mode dims the working floor so the bar reads as the focus. */
+.viewport.partymode .desk .scr,
+.viewport.partymode .door,
+.viewport.partymode .hrroom {
+  opacity: 0.45;
+}
+
 /* ---------------- AMBIENT LIFE (props + roaming workers) ---------------- */
 .prop {
   position: absolute;

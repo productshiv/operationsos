@@ -2,6 +2,7 @@ import type { Desk as DeskData } from './desks';
 import { AgentSprite } from './AgentSprite';
 import { useOpenTaskCount } from '../state/tasks';
 import { usePresence } from '../state/presence';
+import { useParty } from '../state/party';
 
 interface DeskProps {
   desk: DeskData;
@@ -13,8 +14,19 @@ export function Desk({ desk, onOpen }: DeskProps) {
   const style = { left: desk.x, top: desk.y, width: desk.w };
   // Active tasks routed to this agent — shown as a number badge (their workload to check on).
   const tasks = useOpenTaskCount(desk.id);
-  // Whether the agent is at their desk — when out (grabbing a coffee), the chair sits empty.
-  const away = usePresence(desk.id) === 'out';
+  // Whether the agent is at their desk — when out (grabbing a coffee, or at the floor party), the
+  // chair sits empty and the walking/dancing avatar represents them instead.
+  const party = useParty();
+  const away = usePresence(desk.id) === 'out' || party.phase !== 'off';
+
+  if (desk.kind === 'hr') {
+    return (
+      <div className="hrroom" style={{ ...style, height: desk.h }} onClick={() => onOpen?.(desk.id)}>
+        <div className="hrroom-sign">{desk.plate}</div>
+        <div className="hrroom-note">call everyone</div>
+      </div>
+    );
+  }
 
   if (desk.kind === 'door') {
     return (
