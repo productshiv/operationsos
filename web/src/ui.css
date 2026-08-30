@@ -608,9 +608,13 @@
   flex: 1;
   background: var(--ink);
   height: 30%;
-  animation: eq 0.62s ease-in-out infinite alternate;
 }
-@keyframes eq {
+/* Only animate while the jukebox is actually playing, so the TV reflects play/pause. The name is
+   TV-specific — a plain `eq` collides with the jukebox widget's own `eq` keyframes below. */
+.bartv-bars.playing i {
+  animation: bartveq 0.62s ease-in-out infinite alternate;
+}
+@keyframes bartveq {
   from { height: 18%; }
   to { height: 100%; }
 }

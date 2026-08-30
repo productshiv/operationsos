@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { resetPresence } from './presence';
 
 /**
  * Friday-at-the-office mode. The CEO calls everyone from the HR room; the agents down tools and walk
@@ -42,8 +43,13 @@ export function markArrived(agentId: string, expected: number) {
   commit({ phase: arrived.length >= expected ? 'party' : 'gathering', arrived });
 }
 
-/** Back to work. */
+/**
+ * Back to work. Everyone is standing on the dance floor, so reset ambient presence too — otherwise an
+ * agent who happened to be `out` before the party would still read as away when AgentRoamers remounts
+ * and would immediately start another desk-to-waypoint trip instead of returning to work.
+ */
 export function endParty() {
+  resetPresence();
   commit({ phase: 'off', arrived: [] });
 }
 

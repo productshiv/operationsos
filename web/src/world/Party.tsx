@@ -82,7 +82,8 @@ function BarScene({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
       <div className="dancefloor" aria-hidden="true" />
       <div className="bartv">
         <div className="bartv-screen">
-          <div className="bartv-bars" aria-hidden="true">
+          {/* The equalizer only animates while the jukebox is actually playing. */}
+          <div className={`bartv-bars${jukebox.playing ? ' playing' : ''}`} aria-hidden="true">
             {Array.from({ length: 7 }, (_, i) => (
               <i key={i} style={{ animationDelay: `${i * 0.11}s` }} />
             ))}

@@ -15,6 +15,13 @@ export function setPresence(agentId: string, p: Presence) {
   subscribers.forEach((fn) => fn());
 }
 
+/** Everyone back at their desks (used when a floor party ends — they're all on the dance floor). */
+export function resetPresence() {
+  if (Object.keys(map).length === 0) return;
+  map = {};
+  subscribers.forEach((fn) => fn());
+}
+
 const subscribe = (fn: () => void) => {
   subscribers.add(fn);
   return () => subscribers.delete(fn);
