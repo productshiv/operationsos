@@ -10,6 +10,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      // The business feed (see weather-business): same-origin in dev, mirroring the nginx /feed proxy.
+      '/feed': {
+        target: process.env.FEED_TARGET ?? 'http://localhost:8095',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/feed/, ''),
+      },
       '/tf': {
         target: HARNESS_TARGET,
         changeOrigin: true,

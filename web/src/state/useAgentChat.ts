@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trueforge } from '../lib/trueforge';
 import { WEATHERAPI_PROJECT_REF } from '../lib/agents';
-import { abandonSession, fetchHistory, findAgentSession, type RawToolCallLike } from '../lib/sessionHistory';
+import {
+  abandonSession, clearPin, fetchHistory, findAgentSession, pinSession, readPin, specFingerprint,
+  unabandonSession, type RawToolCallLike,
+} from '../lib/sessionHistory';
 import { addTask, clearAttention, setAttention } from './tasks';
 
 export interface ToolActivity {
@@ -163,10 +166,14 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   // the composer disabled and offer a Retry, rather than silently starting a second conversation
   // (forking) or attaching a session whose history we couldn't actually load (hidden divergence).
   const [hydrationError, setHydrationError] = useState(false);
-  // Bumped by retryHydration() to re-run the restore effect.
+  // Bumped by retryHydration()/openSession() to re-run the restore effect.
   const [hydrateNonce, setHydrateNonce] = useState(0);
 
+
   const sessionRef = useRef<string | null>(null);
+  // Mirrors `busy` for the callbacks that must not act mid-turn (see openSession).
+  const busyRef = useRef(false);
+  busyRef.current = busy;
   // The MCP server names the live session was actually created with — frozen at creation, since the
   // server-side session can't be re-specced afterwards. Lets the UI gate Jira-dependent actions on
   // what THIS session can invoke, not on a connector that resolved after the session already existed.
@@ -377,13 +384,23 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     setSessionServers(null);
     setHydrationError(false);
     setHydrating(true);
+    // This is a different conversation, so nothing from the last one may leak across: a stale
+    // "Try again" would otherwise replay the previous chat's message into this session.
+    setTurnError(null);
+    setNeedsConnector(null);
+    lastUserRef.current = '';
     void (async () => {
       if (!instructions || !modelName) {
         if (!cancelled) setHydrating(false);
         return;
       }
       const serverNames = serverKey ? serverKey.split(',') : [];
-      const look = await findAgentSession(instructions, modelName, serverNames);
+      // A pin only applies to the spec it was made under, so when it matches, this session really
+      // was created with these connectors — labelling it with them is correct.
+      const pinned = readPin(agentId, specFingerprint(instructions, modelName, serverNames));
+      const look = pinned
+        ? ({ status: 'found', session: { id: pinned, mcpServers: serverNames } } as const)
+        : await findAgentSession(instructions, modelName, serverNames);
       if (cancelled) return;
       if (look.status === 'error') {
         // Lookup failed — don't start a new session (that would fork an existing conversation).
@@ -449,6 +466,23 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   const retryHydration = useCallback(() => setHydrateNonce((n) => n + 1), []);
 
   /**
+   * Reopen one of this agent's past conversations. Picking it explicitly also un-abandons it, so it
+   * becomes the live thread again rather than being skipped on the next open.
+   */
+  const openSession = useCallback(
+    (id: string) => {
+      // Never switch while a turn is streaming: the old stream would keep writing into the new
+      // conversation's transcript and session.
+      if (busyRef.current) return;
+      unabandonSession(id);
+      // Persisted, so reopening the desk returns to the chat the CEO chose rather than the newest one.
+      pinSession(agentId, id, specFingerprint(instructions, modelName, serverKey ? serverKey.split(',') : []));
+      setHydrateNonce((n) => n + 1);
+    },
+    [agentId, instructions, modelName, serverKey],
+  );
+
+  /**
    * Start a fresh conversation: clear the transcript and drop the session id, so the next message
    * opens a NEW server session and the current (e.g. error-filled) one is left behind. Note the
    * abandoned session still exists server-side; once the new session gets its first turn it becomes
@@ -458,6 +492,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     // Persist the abandonment so a remount/reload can't auto-restore this (e.g. error-filled) session
     // before the replacement gets its first turn.
     if (sessionRef.current) abandonSession(sessionRef.current);
+    clearPin(agentId); // a fresh thread, not the pinned past one
     clearAttention(agentId); // starting fresh — no longer waiting on the CEO
     orderRef.current = [];
     basesRef.current.clear();
@@ -562,6 +597,10 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     /** True when restoring failed (lookup/history error) — composer stays disabled, offer Retry. */
     hydrationError,
     retryHydration,
+    /** Reopen a specific past conversation. */
+    openSession,
+    /** The conversation currently on screen (null before the first turn of a brand-new one). */
+    sessionId: sessionRef.current,
     /** Start a fresh conversation (clears the transcript and the session). */
     newChat,
     /** MCP server names the live session was created with, or null before the first turn. */

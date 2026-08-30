@@ -17,7 +17,12 @@ const LAYERS: Array<{ title: string; sub: string; items: string[]; gate?: boolea
   {
     title: 'OPERATIONSOS',
     sub: 'React + Vite · this app',
-    items: ['Desks, chat, task board', 'Native model + connector setup', 'Conversations persist per agent'],
+    items: [
+      'Desks, chat, task board',
+      'Native model + connector setup',
+      'Conversations persist — new + past chats',
+      'Runs agent-to-agent consults',
+    ],
   },
   {
     title: 'APPROVAL GATE',
@@ -43,7 +48,11 @@ const LAYERS: Array<{ title: string; sub: string; items: string[]; gate?: boolea
   {
     title: 'THE BUSINESS',
     sub: 'a Weather API company',
-    items: ['Customers, usage, payments, errors', 'Complaints from real users', 'Kept live by its own feed service'],
+    items: [
+      'Customers, usage, payments, errors',
+      'Pricing, and complaints from customers',
+      'A feed service keeps it all changing',
+    ],
   },
 ];
 
@@ -56,8 +65,10 @@ const ROADMAP: Array<{ state: 'done' | 'next' | 'later'; title: string; detail: 
   { state: 'done', title: 'Conversations that persist', detail: 'Harness-backed, so context survives a reload and follows you across devices.' },
   { state: 'done', title: 'Tasks + attention', detail: 'Tickets route to the Ops Manager; badges show workload and what needs you.' },
   { state: 'done', title: 'A business that moves', detail: 'A live feed changes the data and files customer complaints for Support to triage.' },
-  { state: 'next', title: 'Agents consulting agents', detail: 'Let Market Research pull the Data Analyst into a thread instead of asking you to relay.' },
+  { state: 'done', title: 'Agents consulting agents', detail: 'Any agent can pull a colleague in — they answer with their own tools, and it comes back into the thread.' },
+  { state: 'done', title: 'Every conversation kept', detail: 'Start a new thread at any desk, and reopen any past one from the picker.' },
   { state: 'next', title: 'Live desk stats', detail: 'Real open-ticket and incident counts on each desk instead of flavour text.' },
+  { state: 'next', title: 'Ops Manager routes onward', detail: 'Let it hand a task to the right specialist itself, rather than every ticket landing on it.' },
   { state: 'next', title: 'Sales & PM desks', detail: 'The two locked doors on the floor — the next two agents to hire.' },
   { state: 'later', title: 'More floors', detail: 'Departments as floors, with a lift between them.' },
   { state: 'later', title: 'Handheld', detail: 'A tighter layout so the floor is genuinely usable on a phone.' },

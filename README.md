@@ -8,26 +8,34 @@ Built for the [Agent Harness Hackathon](https://www.wemakedevs.org/hackathons/tr
 (WeMakeDevs × TrueFoundry × Qodo) on **[TrueForge](https://github.com/truefoundry/trueforge)**,
 TrueFoundry's open-source agent harness.
 
-> Status: **work in progress.** The interaction north-star is the design mock in
-> [`design/mock.html`](design/mock.html) (a 1-bit "operating system" you walk).
+> Live at **[operationalos.productshiv.com](https://operationalos.productshiv.com)** — a 1-bit
+> "operating system" you walk around. The original north-star mock is [`design/mock.html`](design/mock.html).
 
 ## What it does
 
-A roster of specialised agents does real operational work — reaching live tools over **MCP**,
-running generated code in a **sandbox**, and delegating to each other as **subagents** — while
-every irreversible action **pauses for a human's authorisation**. The flagship flow: an agent
-detects a customer silently churning, the team coordinates a save, and the outward actions
-(email, ticket, CRM update) wait in your Inbox for sign-off.
+You walk a 1-bit office floor. At each desk sits a specialised agent doing real operational work
+against a live business over **MCP** — and every irreversible action **pauses for your
+authorisation**, with the exact SQL or payload shown before it runs.
+
+The roster:
+
+| Agent | Does | Reaches |
+| --- | --- | --- |
+| Data Analyst | Business numbers — customers, revenue, usage, churn | Supabase |
+| Market Research | Companies, markets and competitors | Exa (web) |
+| Support Lead | Reads and files tickets | Jira |
+| Incident Response | Error spikes, who they hit, likely cause | Supabase |
+| Operations Manager | Turns a situation into a routed plan | — (routes, then tracks in Jira) |
 
 How the harness does the work:
 
-| Capability        | In OperationsOS                                                        |
-| ----------------- | --------------------------------------------------------------------- |
-| MCP tools         | Each tool (CRM, DB, Zendesk, Grafana, Gmail, web) is an MCP connector  |
-| Sandbox           | The Data Analyst writes SQL/Python and runs it in the sandbox          |
-| Subagents         | The Account Manager delegates to Research / Support / Incident         |
-| Approval gates    | `require_approval_for_tools` on every irreversible tool                |
-| Persistent state  | Each agent conversation is a resumable TrueForge session               |
+| Capability | In OperationsOS |
+| --- | --- |
+| MCP tools | `supabase` (the business data), `atlassian` (Jira), `exa` (web) — configured in-app, not the admin UI |
+| Approval gates | Every write pauses in the thread; you see the payload, then allow or deny |
+| Persistent state | Each conversation is a resumable TrueForge session — context survives reloads and follows you across devices |
+| Agent-to-agent | An agent can pull a colleague in; the app runs a turn on *their* session, because harness sub-agents inherit the parent's (wrong) toolset |
+| Tasks + attention | An authorised ticket routes a task to the Operations Manager; badges show workload and what needs you |
 
 ## Architecture
 
@@ -158,9 +166,38 @@ Every substantive change ships through a GitHub pull request reviewed by
   `pointer-events:none` behind the desks, and subscribing to the motion-preference media query;
   re-review **0 findings**.
 
-Across all 24 PRs Qodo surfaced **55 findings** (including **2 security** issues); every one was
+- **[#26 — Task board: routed tasks, desk badges, CEO attention, contextual tickets](https://github.com/productshiv/operationsos/pull/26)** —
+  **3 findings** (2 High / 1 Medium): the board became unreachable once the last approval cleared
+  (the badge was gated on attention alone, so open tasks were stranded); malformed persisted
+  attention could crash the floor; and `createIssueLink` was mis-read as a new ticket. Fixed by
+  badging attention **plus** open tasks, validating each stored entry, and tightening the tool match
+  to start-with-`create` / end-with-`issue`; re-review **0 findings**.
+  (Opened first as #25, which GitHub auto-closed when its stacked base branch was deleted on merge;
+  the same work, and its 4 findings, carried into #26.)
+- **[#27 — HR room: call everyone and the office becomes a bar](https://github.com/productshiv/operationsos/pull/27)** —
+  **4 findings** (1 High / 3 Medium): agents who were already away wandered off again the moment the
+  party ended; the TV equalizer kept moving while the jukebox was paused; two `@keyframes eq` blocks
+  collided so the TV never ran its own animation; and — the High — a question checkpoint was cleared
+  before the harness accepted the answer, so a transient failure stranded the thread on a 422. All
+  fixed; re-review **0 findings**.
+- **[#28 — Agents consult each other + architecture & roadmap windows](https://github.com/productshiv/operationsos/pull/28)** —
+  **8 findings across two rounds** (4 High / 4 Medium) — the largest review of the project, almost
+  all on the new cross-agent path: a colleague paused on a question or approval stranded every later
+  consultation; a lookup failure forked the conversation; overlapping turns could race one session;
+  streamed output was double-counted; answering a question left stale attention on the board; and the
+  new menu buttons overflowed (then, once hidden, became unreachable). Seven fixed. One —
+  "strands approval in open desk" — was **verified as a false positive** and answered on the thread
+  rather than changed: `Office` renders a single `DeskWindow`, so two agent chats never mount at once.
+  Chasing the menu finding also turned up a **pre-existing** overflow (the header clipped its own
+  controls on phones), fixed at the same time.
+
+Across all 28 PRs Qodo surfaced **70 findings** (including **2 security** issues); every one was
 fixed — or, where appropriate, dismissed with reasoning on the thread — and each PR that carried
 actionable findings passed a **follow-up review with 0 findings** before merge.
+
+> Worth recording: Qodo reviews on PR **open**, not on later pushes. Follow-up commits are reviewed
+> by asking for one explicitly (`/review` as a PR comment) — which is how the #28 round-two findings,
+> including two real bugs in the fixes themselves, were caught before merge.
 
 _Updated as each PR merges — what Qodo surfaced, and how it was resolved or, with reasoning, dismissed._
 
