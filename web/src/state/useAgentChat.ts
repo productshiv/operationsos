@@ -322,10 +322,14 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
         const input = q
           ? [{ type: 'user.tool_response', threadId: q.threadId, toolCallId: q.toolCallId, content: t }]
           : [{ type: 'user.message', content: t }];
-        if (q) setQuestion(null);
         const stream = await trueforge.sessions.createTurnStream(sessionRef.current, {
           input: input as never,
         });
+        // Only forget the question once the harness has actually accepted the answer. Clearing it
+        // beforehand would, on a transient send failure, leave the server still waiting on the tool
+        // response while the client had moved on — and the retry would go as a plain user message
+        // (rejected with a 422), stranding the thread.
+        if (q) setQuestion(null);
         await consume(stream as never);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);
