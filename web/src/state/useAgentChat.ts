@@ -131,6 +131,10 @@ export function useAgentChat(spec: Record<string, unknown>) {
   const [turnError, setTurnError] = useState<string | null>(null);
 
   const sessionRef = useRef<string | null>(null);
+  // The MCP server names the live session was actually created with — frozen at creation, since the
+  // server-side session can't be re-specced afterwards. Lets the UI gate Jira-dependent actions on
+  // what THIS session can invoke, not on a connector that resolved after the session already existed.
+  const [sessionServers, setSessionServers] = useState<string[] | null>(null);
   const basesRef = useRef<Map<string, MessageBase>>(new Map());
   const orderRef = useRef<string[]>([]);
   const userTextRef = useRef<Map<string, string>>(new Map());
@@ -264,6 +268,9 @@ export function useAgentChat(spec: Record<string, unknown>) {
         if (!sessionRef.current) {
           const created = await trueforge.sessions.create({ agent: { spec } } as never);
           sessionRef.current = (created as { data: { id: string } }).data.id;
+          // Freeze the servers this session can use — the action gate reads these, not a later-resolved spec.
+          const servers = Array.isArray(spec.mcpServers) ? (spec.mcpServers as Array<{ name?: string }>) : [];
+          setSessionServers(servers.map((s) => s?.name ?? '').filter(Boolean));
         }
         const stream = await trueforge.sessions.createTurnStream(sessionRef.current, {
           input: [{ type: 'user.message', content: t }],
@@ -334,10 +341,12 @@ export function useAgentChat(spec: Record<string, unknown>) {
       turnStartRef.current = orderRef.current.length;
       try {
         await consume(stream as never);
-      } catch (e) {
-        truncateTurn(); // drop partial output from the failed resume
-        rebuild();
-        setTurnError(friendlyError((e as Error).message ?? String(e)));
+      } catch {
+        // The approval was already accepted, so the tool may have run. Do NOT offer the generic
+        // retry here: it replays the original message and could duplicate the write (e.g. a second
+        // Jira ticket). Surface a passive note and let the CEO check before acting.
+        truncateTurn(); // drop partial output from the interrupted resume
+        note('⚠ The response stream dropped after your approval was sent — the action may already have run. Check before repeating it, to avoid a duplicate.');
       } finally {
         setBusy(false);
       }
@@ -351,6 +360,8 @@ export function useAgentChat(spec: Record<string, unknown>) {
     pending,
     needsConnector,
     turnError,
+    /** MCP server names the live session was created with, or null before the first turn. */
+    sessionServers,
     send,
     decide,
     retry,

@@ -7,7 +7,16 @@ import { AgentChat } from '../agents/AgentChat';
  * The window that opens when you interact with a desk. Live agents (those with a config) get a
  * real chat; the rest are placeholder shells until their agent lands.
  */
-export function DeskWindow({ desk, onClose }: { desk: Desk; onClose: () => void }) {
+export function DeskWindow({
+  desk,
+  jira,
+  onClose,
+}: {
+  desk: Desk;
+  /** The live Jira connector name (or null), threaded to the chat for the "Open a ticket" action. */
+  jira: string | null | undefined;
+  onClose: () => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -26,7 +35,7 @@ export function DeskWindow({ desk, onClose }: { desk: Desk; onClose: () => void 
         </div>
         <div className="wbody">
           {agent ? (
-            <AgentChat agent={agent} />
+            <AgentChat agent={agent} jira={jira} />
           ) : desk.kind === 'door' ? (
             <p>
               <b>{desk.plate.split(' ')[0]}</b> comes online in a later update. The desk is wired — the

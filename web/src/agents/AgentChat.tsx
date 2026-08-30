@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
-import { useJiraConnector } from '../state/useJiraConnector';
 import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
 import { buildAgentSpec, type AgentConfig } from '../lib/agents';
 
@@ -61,15 +60,17 @@ function ToolCard({ tool }: { tool: ToolActivity }) {
  * and — when a tool needs sign-off — a gold approval gate right in the thread. The agent doesn't
  * touch the database until you authorise.
  */
-export function AgentChat({ agent }: { agent: AgentConfig }) {
-  // Resolve the harness's Jira connector once and inject it into the spec at runtime, so a missing or
-  // renamed Jira never breaks this agent's normal answers and the ticket action only shows when it can
-  // actually file one. `undefined` while still loading.
-  const jira = useJiraConnector();
+export function AgentChat({ agent, jira }: { agent: AgentConfig; jira: string | null | undefined }) {
+  // Jira (the live connector name, or null) is resolved by the app from shared connector state and
+  // injected into the spec at runtime — so a missing or renamed Jira never breaks this agent's normal
+  // answers, and the atlassian/jira naming difference is handled for us.
   const spec = useMemo(() => buildAgentSpec(agent, jira ?? null), [agent, jira]);
-  const canTicket = !!jira;
-  const { items, busy, pending, needsConnector, turnError, send, decide, retry, clearNeedsConnector, clearTurnError } =
+  const { items, busy, pending, needsConnector, turnError, sessionServers, send, decide, retry, clearNeedsConnector, clearTurnError } =
     useAgentChat(spec);
+  // Offer the ticket action only when the connector THIS session was created with includes Jira — so
+  // it never targets a session that can't invoke it (e.g. Jira was added after the session started).
+  // Before the first turn, fall back to the currently-resolved connector.
+  const canTicket = jira != null && (sessionServers ? sessionServers.includes(jira) : true);
   const [draft, setDraft] = useState('');
   const [fixing, setFixing] = useState(false);
   const [fixErr, setFixErr] = useState<string | null>(null);
