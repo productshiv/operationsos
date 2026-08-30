@@ -17,8 +17,24 @@ const initials = (plate: string) =>
 
 const homeOf = (d: Desk) => ({ x: d.x + d.w / 2 - 10, y: d.y + d.h - 2 });
 
+/** The dance moves. Each agent gets its own, and the floor's left/right halves are offset by half a
+ *  beat so the room moves in call-and-response rather than one synchronised blob. */
+const MOVES = ['bob', 'sway', 'stepTouch', 'raiseRoof', 'shimmy', 'spin'] as const;
+
 /** One agent walking to the dance floor, then dancing once the bar is open. */
-function Partygoer({ desk, spot, dancing }: { desk: Desk; spot: { x: number; y: number }; dancing: boolean }) {
+function Partygoer({
+  desk,
+  spot,
+  dancing,
+  move,
+  half,
+}: {
+  desk: Desk;
+  spot: { x: number; y: number };
+  dancing: boolean;
+  move: (typeof MOVES)[number];
+  half: 'l' | 'r';
+}) {
   const reduced = useReducedMotion();
   const home = useMemo(() => homeOf(desk), [desk]);
   const [pos, setPos] = useState(home);
@@ -42,7 +58,9 @@ function Partygoer({ desk, spot, dancing }: { desk: Desk; spot: { x: number; y: 
   const ink = 'var(--ink)';
   return (
     <div
-      className={`sprite roamer partygoer${walking ? ' walk' : ''}${dancing && !reduced ? ' dancing' : ''}`}
+      className={`sprite roamer partygoer${walking ? ' walk' : ''}${
+        dancing && !reduced ? ` dancing move-${move} half-${half}` : ''
+      }`}
       style={{ left: pos.x, top: pos.y, transition: reduced ? 'none' : `left ${dur}ms linear, top ${dur}ms linear` }}
     >
       <div className="shadow" />
@@ -110,9 +128,21 @@ export function Party({ jukebox }: { jukebox: ReturnType<typeof useJukebox> }) {
   return (
     <>
       {dancing && <BarScene jukebox={jukebox} />}
-      {AGENT_DESKS.map((desk, i) => (
-        <Partygoer key={desk.id} desk={desk} spot={DANCE_SPOTS[i % DANCE_SPOTS.length]} dancing={dancing} />
-      ))}
+      {AGENT_DESKS.map((desk, i) => {
+        const spot = DANCE_SPOTS[i % DANCE_SPOTS.length];
+        // Split the floor down the middle so the two halves alternate (call and response).
+        const half = spot.x < 470 ? 'l' : 'r';
+        return (
+          <Partygoer
+            key={desk.id}
+            desk={desk}
+            spot={spot}
+            dancing={dancing}
+            move={MOVES[i % MOVES.length]}
+            half={half}
+          />
+        );
+      })}
     </>
   );
 }

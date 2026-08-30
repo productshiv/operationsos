@@ -146,6 +146,12 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  // Set when the agent asked a question (ask_user_question) and is waiting on an answer. While this
+  // is open the harness rejects plain user messages, so the next message is sent as a tool response.
+  const [question, setQuestion] = useState<{ threadId: string; toolCallId: string } | null>(null);
+  // Latest `question` for use inside runTurn without making it a dependency (it re-reads at send time).
+  const questionRef = useRef(question);
+  questionRef.current = question;
   // Set when a turn failed because a connector the agent needs isn't configured on the harness.
   const [needsConnector, setNeedsConnector] = useState<string | null>(null);
   // Set when a turn failed for another reason (e.g. a network error) — shown with a Try-again.
@@ -266,6 +272,14 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
         setPending({ threadId, toolCalls });
         break;
       }
+      case 'tool.response_required': {
+        // The agent asked the CEO something (ask_user_question). The answer must go back as a
+        // `user.tool_response` for this tool call — a plain user message is rejected (422) while a
+        // question is pending.
+        const ref = (ev.toolCalls ?? [])[0];
+        if (ref?.id) setQuestion({ threadId: ev.threadId ?? 'main', toolCallId: ref.id });
+        break;
+      }
       case 'turn.done':
         setBusy(false);
         // A turn can fail after streaming nothing (e.g. a model 402, or a connector that isn't
@@ -302,8 +316,15 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
           const servers = Array.isArray(spec.mcpServers) ? (spec.mcpServers as Array<{ name?: string }>) : [];
           setSessionServers(servers.map((s) => s?.name ?? '').filter(Boolean));
         }
+        // If the agent asked a question, the reply must answer that tool call — the harness rejects a
+        // plain user message while a question (or approval) is pending.
+        const q = questionRef.current;
+        const input = q
+          ? [{ type: 'user.tool_response', threadId: q.threadId, toolCallId: q.toolCallId, content: t }]
+          : [{ type: 'user.message', content: t }];
+        if (q) setQuestion(null);
         const stream = await trueforge.sessions.createTurnStream(sessionRef.current, {
-          input: [{ type: 'user.message', content: t }],
+          input: input as never,
         });
         await consume(stream as never);
       } catch (e) {
@@ -343,6 +364,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     sessionRef.current = null;
     setItems([]);
     setPending(null);
+    setQuestion(null);
     setSessionServers(null);
     setHydrationError(false);
     setHydrating(true);
@@ -390,6 +412,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
       rebuild();
       // Restore an approval left unresolved when the session was closed mid-gate, so the CEO can still
       // authorise/deny it instead of being stranded with a paused (un-sendable) session.
+      if (load.history.question) setQuestion(load.history.question);
       if (load.history.pending) {
         const toolCalls: PendingCall[] = load.history.pending.toolCalls.map((raw: RawToolCallLike) => {
           const info = readTool(raw);
@@ -436,6 +459,7 @@ export function useAgentChat(spec: Record<string, unknown>, agentId: string) {
     lastUserRef.current = '';
     setItems([]);
     setPending(null);
+    setQuestion(null);
     setNeedsConnector(null);
     setTurnError(null);
     setSessionServers(null);

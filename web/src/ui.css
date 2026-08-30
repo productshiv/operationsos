@@ -634,25 +634,72 @@
   background: var(--panel);
 }
 
-/* Dancing: bob the body and throw the arms up. */
-.partygoer.dancing .roamer-body {
-  animation: dance 0.5s steps(2) infinite;
-}
+/* Dancing. Everyone shares one beat, but each agent has its own move, and the floor's left and right
+   halves are offset by half a beat so the room reads as call-and-response, not one blob. */
 .partygoer.dancing .armL {
-  animation: armup 0.5s steps(2) infinite;
   transform-origin: 4px 16px;
 }
 .partygoer.dancing .armR {
-  animation: armup 0.5s steps(2) infinite reverse;
   transform-origin: 16px 16px;
 }
-@keyframes dance {
+.partygoer.dancing.half-r .roamer-body,
+.partygoer.dancing.half-r .armL,
+.partygoer.dancing.half-r .armR,
+.partygoer.dancing.half-r .legA,
+.partygoer.dancing.half-r .legB {
+  animation-delay: 0.25s; /* half a beat behind the left half */
+}
+
+/* bob — up-down with a little tilt */
+.partygoer.move-bob .roamer-body { animation: dcBob 0.5s steps(2) infinite; }
+@keyframes dcBob {
   0% { transform: translateY(0) rotate(-4deg); }
   100% { transform: translateY(-3px) rotate(4deg); }
 }
-@keyframes armup {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(-52deg); }
+
+/* sway — side to side, arms out */
+.partygoer.move-sway .roamer-body { animation: dcSway 0.72s ease-in-out infinite alternate; }
+.partygoer.move-sway .armL { animation: dcArmOutL 0.72s ease-in-out infinite alternate; }
+.partygoer.move-sway .armR { animation: dcArmOutR 0.72s ease-in-out infinite alternate; }
+@keyframes dcSway {
+  0% { transform: translateX(-2px) rotate(-7deg); }
+  100% { transform: translateX(2px) rotate(7deg); }
+}
+@keyframes dcArmOutL { 0% { transform: rotate(0deg); } 100% { transform: rotate(38deg); } }
+@keyframes dcArmOutR { 0% { transform: rotate(0deg); } 100% { transform: rotate(-38deg); } }
+
+/* step-touch — alternating legs, small hop */
+.partygoer.move-stepTouch .roamer-body { animation: dcHop 0.5s steps(2) infinite; }
+.partygoer.move-stepTouch .legA { animation: dcLegA 0.5s steps(1) infinite; }
+.partygoer.move-stepTouch .legB { animation: dcLegB 0.5s steps(1) infinite; }
+@keyframes dcHop { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
+@keyframes dcLegA { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes dcLegB { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+
+/* raise the roof — both arms punching up */
+.partygoer.move-raiseRoof .roamer-body { animation: dcBob 0.5s steps(2) infinite; }
+.partygoer.move-raiseRoof .armL { animation: dcRoofL 0.5s steps(2) infinite; }
+.partygoer.move-raiseRoof .armR { animation: dcRoofR 0.5s steps(2) infinite; }
+@keyframes dcRoofL { 0% { transform: rotate(-10deg); } 100% { transform: rotate(-72deg); } }
+@keyframes dcRoofR { 0% { transform: rotate(10deg); } 100% { transform: rotate(72deg); } }
+
+/* shimmy — quick side shuffle, arms alternating */
+.partygoer.move-shimmy .roamer-body { animation: dcShimmy 0.34s steps(2) infinite; }
+.partygoer.move-shimmy .armL { animation: dcRoofL 0.68s steps(2) infinite; }
+.partygoer.move-shimmy .armR { animation: dcRoofR 0.68s steps(2) infinite reverse; }
+@keyframes dcShimmy {
+  0% { transform: translateX(-3px); }
+  100% { transform: translateX(3px); }
+}
+
+/* spin — turn on the spot (the sprite flips), with a bob */
+.partygoer.move-spin .roamer-body { animation: dcSpin 1.44s steps(4) infinite; }
+@keyframes dcSpin {
+  0% { transform: scaleX(1) translateY(0); }
+  25% { transform: scaleX(-1) translateY(-3px); }
+  50% { transform: scaleX(1) translateY(0); }
+  75% { transform: scaleX(-1) translateY(-3px); }
+  100% { transform: scaleX(1) translateY(0); }
 }
 /* Party mode dims the working floor so the bar reads as the focus. */
 .viewport.partymode .desk .scr,
