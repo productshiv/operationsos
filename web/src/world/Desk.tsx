@@ -39,23 +39,6 @@ export function Desk({ desk, onOpen }: DeskProps) {
     );
   }
 
-  if (desk.kind === 'inbox') {
-    return (
-      <div className="desk inbox" style={style} onClick={() => onOpen?.(desk.id)}>
-        <div className="tray">
-          <span className="badge">1</span>
-          <div className="lbl chi">IN-TRAY</div>
-          <div className="slot" />
-          <div className="slot" />
-          <div className="slot" />
-        </div>
-        <div className="seat">
-          <div className="plate">{desk.plate}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="desk" data-id={desk.id} style={style} onClick={() => onOpen?.(desk.id)}>
       <div className="scr" style={{ height: desk.h - 30 }}>
