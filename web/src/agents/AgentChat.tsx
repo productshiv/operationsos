@@ -3,7 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentChat, type ToolActivity } from '../state/useAgentChat';
 import { addCatalogConnector, listCatalog, type CatalogConnector } from '../lib/connectors';
-import { buildAgentSpec, type AgentConfig } from '../lib/agents';
+import { AGENTS, buildAgentSpec, type AgentConfig } from '../lib/agents';
+import { consultAgent } from '../lib/consult';
+import { setAttention } from '../state/tasks';
 
 /** The reply flags something worth a ticket — so "Open a ticket" is offered contextually, not after
  *  every message. Matches escalation language, warnings, and problems an agent would want tracked. */
@@ -96,6 +98,9 @@ export function AgentChat({
   // The catalog entry for the missing connector (prefetched), so we know whether a one-click add is
   // possible (no-auth) or it needs credentials/OAuth that only the Integrations panel collects.
   const [entry, setEntry] = useState<CatalogConnector | null>(null);
+  // Agent-to-agent: who we're currently asking, and anything that came back needing the CEO.
+  const [asking, setAsking] = useState<string | null>(null);
+  const [consultNote, setConsultNote] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -136,6 +141,36 @@ export function AgentChat({
       setFixErr('Couldn’t add it — try again, or add it in Integrations.');
     } finally {
       setFixing(false);
+    }
+  };
+
+  /** The other agents on the floor — who this one can pull into the conversation. */
+  const colleagues = Object.values(AGENTS).filter((a) => a.id !== agent.id);
+
+  /**
+   * Ask a colleague on the CEO's behalf: run a turn on THEIR session (with their tools), then feed
+   * the answer back into this conversation so this agent can carry on with it.
+   */
+  const askColleague = async (id: string, name: string) => {
+    const lastUser = [...items].reverse().find((i) => i.role === 'user')?.text;
+    if (!lastUser || busy || pending || locked || asking) return;
+    setAsking(id);
+    setConsultNote(null);
+    const res = await consultAgent({
+      agentId: id,
+      question: `A colleague (${agent.name}) needs this to answer the CEO: ${lastUser}`,
+      jira: jira ?? null,
+      model: agentModel,
+    });
+    setAsking(null);
+    if (res.kind === 'answer') {
+      void send(`I asked the ${name}. They said:\n\n${res.text}\n\nUse that to answer my question.`);
+    } else if (res.kind === 'needs-approval') {
+      // They can't answer without a sign-off — put it on the board rather than failing quietly.
+      setAttention(id, res.tool);
+      setConsultNote(`${name} needs your sign-off to run ${res.tool} — open their desk to authorise it.`);
+    } else {
+      setConsultNote(`Couldn't reach ${name}: ${res.message}`);
     }
   };
 
@@ -272,6 +307,29 @@ export function AgentChat({
           </div>
         )}
       </div>
+
+      {(asking || consultNote) && (
+        <div className="fixcard">
+          <p>{asking ? `Asking the ${AGENTS[asking]?.name ?? 'colleague'}…` : consultNote}</p>
+          {!asking && (
+            <div className="fixrow">
+              <button className="btn" onClick={() => setConsultNote(null)}>Dismiss</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pull another agent into the thread — they answer with their own tools. */}
+      {items.some((i) => i.role === 'user') && !busy && !pending && !locked && (
+        <div className="chips consultrow">
+          <span className="consultlabel">Ask a colleague:</span>
+          {colleagues.map((c) => (
+            <button key={c.id} className="qchip" disabled={!!asking} onClick={() => void askColleague(c.id, c.name)}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="chips">
         {agent.suggestions.map((s) => (
